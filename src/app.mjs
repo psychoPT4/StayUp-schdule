@@ -2,6 +2,15 @@ import { normalizeWeeks, parseScheduleText, resolveLessonTime, weekdayLabels } f
 
 const STORAGE_KEY = "mobile-schedule-courses";
 const SETTINGS_KEY = "mobile-schedule-settings";
+const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+const COURSE_THEMES = [
+  { border: "#d98b37", bg: "#fff5e7", fg: "#7a3d00" },
+  { border: "#2f7dcb", bg: "#eaf4ff", fg: "#174b78" },
+  { border: "#7a60c8", bg: "#f1edff", fg: "#413177" },
+  { border: "#2c9a68", bg: "#e9f7ef", fg: "#17613f" },
+  { border: "#d35f75", bg: "#fff0f3", fg: "#8a2638" },
+  { border: "#5b8d35", bg: "#f1f8e9", fg: "#35591e" },
+];
 
 const sampleCourses = parseScheduleText(`
 高等数学A
@@ -20,6 +29,11 @@ const elements = {
   weekGrid: document.querySelector("#weekGrid"),
   rawSchedule: document.querySelector("#rawSchedule"),
   importUrl: document.querySelector("#importUrl"),
+  schoolName: document.querySelector("#schoolName"),
+  systemType: document.querySelector("#systemType"),
+  schoolPortal: document.querySelector("#schoolPortal"),
+  schoolImportButton: document.querySelector("#schoolImportButton"),
+  schoolImportHint: document.querySelector("#schoolImportHint"),
   parseButton: document.querySelector("#parseButton"),
   fetchButton: document.querySelector("#fetchButton"),
   imageInput: document.querySelector("#imageInput"),
@@ -53,6 +67,7 @@ function bindEvents() {
     activatePanel("reviewPanel");
   });
 
+  elements.schoolImportButton.addEventListener("click", importFromSchoolPortal);
   elements.fetchButton.addEventListener("click", importFromUrl);
   elements.imageInput.addEventListener("change", importFromImage);
   elements.courseForm.addEventListener("submit", addManualCourse);
@@ -102,26 +117,73 @@ async function importFromUrl() {
   }
 }
 
+async function importFromSchoolPortal() {
+  const portal = elements.schoolPortal.value.trim();
+  const school = elements.schoolName.value.trim() || "你的学校";
+  const system = elements.systemType.options[elements.systemType.selectedIndex].textContent;
+
+  elements.schoolImportHint.textContent = `${school}（${system}）：如果你已经登录教务系统，我会尝试读取课表页；失败时请复制课表文字到下方。`;
+  if (!portal) {
+    elements.rawSchedule.value = `请先登录${school}教务系统，打开课表页，复制页面里的课程表文字后粘贴到这里。\n\n建议格式：课程名 周几 第几节 第几周 地点`;
+    return;
+  }
+
+  elements.importUrl.value = portal;
+  await importFromUrl();
+}
+
 async function importFromImage(event) {
   const file = event.target.files?.[0];
   if (!file) return;
 
-  if (!("TextDetector" in window)) {
-    elements.ocrHint.textContent = "当前浏览器没有开放内置 OCR。请用系统相册或微信识别图片文字后粘贴导入。";
-    return;
-  }
-
   try {
-    const bitmap = await createImageBitmap(file);
-    const detector = new window.TextDetector();
-    const detected = await detector.detect(bitmap);
-    const text = detected.map((item) => item.rawValue).join("\n");
+    elements.ocrHint.textContent = "正在识别图片，请稍等...";
+    const text = await recognizeImageText(file);
     elements.rawSchedule.value = text;
     mergeCourses(parseScheduleText(text));
     activatePanel("reviewPanel");
   } catch (error) {
-    elements.ocrHint.textContent = `图片识别失败：${error.message}`;
+    elements.ocrHint.textContent = `图片识别失败：${error.message}。可以先用系统相册或微信识别文字后粘贴导入。`;
   }
+}
+
+async function recognizeImageText(file) {
+  if ("TextDetector" in window) {
+    const bitmap = await createImageBitmap(file);
+    const detector = new window.TextDetector();
+    const detected = await detector.detect(bitmap);
+    return detected.map((item) => item.rawValue).join("\n");
+  }
+
+  await loadScript(TESSERACT_CDN);
+  if (!window.Tesseract) throw new Error("OCR 模块加载失败");
+
+  const result = await window.Tesseract.recognize(file, "chi_sim+eng", {
+    logger(message) {
+      if (message.status === "recognizing text") {
+        elements.ocrHint.textContent = `正在识别图片：${Math.round(message.progress * 100)}%`;
+      }
+    },
+  });
+  return result.data.text;
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      existing.addEventListener("load", resolve, { once: true });
+      if (window.Tesseract) resolve();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("无法加载 OCR 脚本"));
+    document.head.append(script);
+  });
 }
 
 function addManualCourse(event) {
@@ -201,8 +263,9 @@ function renderWeekGrid(currentWeek) {
 }
 
 function renderCourseCard(course) {
+  const theme = getCourseTheme(course.name);
   return `
-    <div class="course-card">
+    <div class="course-card" style="--course-border:${theme.border};--course-bg:${theme.bg};--course-fg:${theme.fg}">
       <strong>${escapeHtml(course.name)}</strong>
       <div class="course-meta">
         <span>${course.time.startTime}-${course.time.endTime} · ${course.time.label}</span>
@@ -211,6 +274,12 @@ function renderCourseCard(course) {
       </div>
     </div>
   `;
+}
+
+function getCourseTheme(name) {
+  let hash = 0;
+  for (const char of String(name)) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return COURSE_THEMES[hash % COURSE_THEMES.length];
 }
 
 function renderToday(today, currentWeek) {

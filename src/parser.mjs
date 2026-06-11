@@ -96,7 +96,7 @@ export function parseScheduleText(text) {
     if (parsed) {
       courses.push(parsed);
       pendingName = "";
-    } else if (!hasScheduleSignal(line)) {
+    } else if (!hasScheduleSignal(line) && !isHeaderLine(line)) {
       pendingName = cleanCourseName(line);
     }
   }
@@ -161,6 +161,11 @@ function extractLocation(line, name, weekdayRaw, timeLabel, weekText) {
 
 function hasScheduleSignal(line) {
   return /(?:星期|周)[一二三四五六日天1-7]|\d{1,2}\s*[-~至]\s*\d{1,2}\s*节|\d{1,2}\s*周/.test(line);
+}
+
+function isHeaderLine(line) {
+  const headerWords = ["课程", "课程名称", "星期", "节次", "周次", "地点", "教室"];
+  return headerWords.filter((word) => line.includes(word)).length >= 2;
 }
 
 function cleanCourseName(value) {

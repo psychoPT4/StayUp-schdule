@@ -113,3 +113,21 @@ test("parses compact manual entry lines", () => {
   assert.equal(course.time.startTime, "16:10");
   assert.equal(course.weeks.label, "1-8周");
 });
+
+test("parses OCR-style rows with noisy spacing", () => {
+  const text = `
+    课程名称    星期/节次         周次       地点
+    线性代数    周二 第5-6节      1-16周    二教203
+    大学物理    星期四 9-10节     3-15周 单周  实验楼A402
+  `;
+
+  const courses = parseScheduleText(text);
+
+  assert.equal(courses.length, 2);
+  assert.equal(courses[0].name, "线性代数");
+  assert.equal(courses[0].weekdayLabel, "周二");
+  assert.equal(courses[0].location, "二教203");
+  assert.equal(courses[1].name, "大学物理");
+  assert.equal(courses[1].weeks.type, "odd");
+  assert.equal(courses[1].time.startTime, "19:00");
+});

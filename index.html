@@ -50,6 +50,24 @@
       </section>
 
       <section class="panel" id="importPanel">
+        <div class="control-block school-import">
+          <label for="schoolName">学校 / 教务系统导入</label>
+          <div class="form-grid">
+            <input id="schoolName" placeholder="学校名称，例如：某某大学" />
+            <select id="systemType">
+              <option value="zhengfang">正方教务</option>
+              <option value="qingguo">青果教务</option>
+              <option value="urp">URP / 综合教务</option>
+              <option value="custom">其他系统</option>
+            </select>
+          </div>
+          <div class="inline-row">
+            <input id="schoolPortal" inputmode="url" placeholder="教务系统课表页 URL，可选" />
+            <button id="schoolImportButton">开始</button>
+          </div>
+          <p class="hint" id="schoolImportHint">当前版本不保存教务密码；请先登录学校教务系统，再尝试读取课表页或复制课表文字导入。</p>
+        </div>
+
         <div class="control-block">
           <label for="importUrl">教务系统或课表网页地址</label>
           <div class="inline-row">
@@ -68,7 +86,7 @@
         <div class="control-block">
           <label for="imageInput">图片识别导入</label>
           <input id="imageInput" type="file" accept="image/*" />
-          <p class="hint" id="ocrHint">支持浏览器内置 OCR 时会自动识别；不支持时可先用系统相册、微信或浏览器识别文字后粘贴。</p>
+          <p class="hint" id="ocrHint">优先使用浏览器 OCR；不支持时会尝试加载 Tesseract.js 本地识别，首次可能较慢。</p>
         </div>
       </section>
 
