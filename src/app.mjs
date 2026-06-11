@@ -42,6 +42,10 @@ function bindEvents() {
     button.addEventListener("click", () => activatePanel(button.dataset.panel));
   });
 
+  document.querySelectorAll("[data-panel-target]").forEach((button) => {
+    button.addEventListener("click", () => activatePanel(button.dataset.panelTarget));
+  });
+
   elements.parseButton.addEventListener("click", () => {
     const imported = parseScheduleText(elements.rawSchedule.value);
     mergeCourses(imported);

@@ -1,10 +1,10 @@
 {
-  "name": "课表助手",
-  "short_name": "课表",
+  "name": "StayUp课表",
+  "short_name": "StayUp",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f7f4ee",
-  "theme_color": "#195d5a",
+  "theme_color": "#1f6f68",
   "orientation": "portrait",
   "icons": [
     {

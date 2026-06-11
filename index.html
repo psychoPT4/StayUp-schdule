@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#195d5a" />
-    <title>课表助手</title>
+    <meta name="theme-color" content="#1f6f68" />
+    <title>StayUp课表</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -13,9 +13,10 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">第 <span id="currentWeek">1</span> 周</p>
-          <h1>课表助手</h1>
+          <h1>StayUp课表</h1>
+          <p class="subtitle">导入、校对、每天准时上课</p>
         </div>
-        <button class="icon-button" id="settingsButton" aria-label="设置开学日期">⚙</button>
+        <button class="icon-button" id="settingsButton" aria-label="设置开学日期">设置</button>
       </header>
 
       <section class="today-strip" aria-label="今日课程">
@@ -24,6 +25,17 @@
           <strong id="todayLabel">周一</strong>
         </div>
         <div id="nextClass" class="next-class">暂无课程</div>
+      </section>
+
+      <section class="quick-actions" aria-label="快捷入口">
+        <button class="quick-card" data-panel-target="importPanel">
+          <span>导入</span>
+          <small>网页 / OCR</small>
+        </button>
+        <button class="quick-card" data-panel-target="manualPanel">
+          <span>添加</span>
+          <small>手动录入</small>
+        </button>
       </section>
 
       <nav class="tabs" aria-label="功能切换">
@@ -44,7 +56,7 @@
             <input id="importUrl" inputmode="url" placeholder="https://..." />
             <button id="fetchButton">读取</button>
           </div>
-          <p class="hint">浏览器安全限制可能阻止跨站读取，失败时可把网页课表复制到下方。</p>
+          <p class="hint">如果学校网站阻止跨站读取，登录后复制课表文字到下方即可。</p>
         </div>
 
         <div class="control-block">
@@ -56,7 +68,7 @@
         <div class="control-block">
           <label for="imageInput">图片识别导入</label>
           <input id="imageInput" type="file" accept="image/*" />
-          <p class="hint" id="ocrHint">支持系统浏览器内置 OCR 时会自动识别；不支持时可先用相册/微信/系统文字识别复制后粘贴。</p>
+          <p class="hint" id="ocrHint">支持浏览器内置 OCR 时会自动识别；不支持时可先用系统相册、微信或浏览器识别文字后粘贴。</p>
         </div>
       </section>
 
