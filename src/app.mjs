@@ -1,4 +1,10 @@
-import { normalizeWeeks, parseScheduleText, resolveLessonTime, weekdayLabels } from "./parser.mjs";
+import {
+  normalizeWeeks,
+  parseScheduleText,
+  periodTimes as DEFAULT_PERIOD_TIMES,
+  resolveLessonTime,
+  weekdayLabels,
+} from "./parser.mjs";
 
 const STORAGE_KEY = "mobile-schedule-courses";
 const SETTINGS_KEY = "mobile-schedule-settings";
@@ -40,6 +46,7 @@ const elements = {
   settingsButton: document.querySelector("#settingsButton"),
   settingsDialog: document.querySelector("#settingsDialog"),
   termStart: document.querySelector("#termStart"),
+  periodEditor: document.querySelector("#periodEditor"),
   saveSettings: document.querySelector("#saveSettings"),
 };
 
@@ -52,7 +59,7 @@ function bindEvents() {
   });
 
   elements.parseButton.addEventListener("click", () => {
-    const imported = parseScheduleText(elements.rawSchedule.value);
+    const imported = parseScheduleText(elements.rawSchedule.value, { periodTimes: settings.periodTimes });
     mergeCourses(imported);
     elements.rawSchedule.value = "";
     activatePanel("reviewPanel");
@@ -71,12 +78,19 @@ function bindEvents() {
 
   elements.settingsButton.addEventListener("click", () => {
     elements.termStart.value = settings.termStart;
+    renderPeriodEditor();
     elements.settingsDialog.showModal();
   });
 
   elements.saveSettings.addEventListener("click", () => {
     settings.termStart = elements.termStart.value || settings.termStart;
+    settings.periodTimes = readPeriodEditor();
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    courses = courses.map((course) => ({
+      ...course,
+      time: resolveLessonTime(course.time.label, settings.periodTimes) || course.time,
+    }));
+    saveCourses();
     render();
   });
 }
@@ -98,7 +112,7 @@ async function importFromUrl() {
     const response = await fetch(url);
     const html = await response.text();
     const text = new DOMParser().parseFromString(html, "text/html").body.innerText;
-    const imported = parseScheduleText(text);
+    const imported = parseScheduleText(text, { periodTimes: settings.periodTimes });
     if (!imported.length) throw new Error("未识别到课程");
     mergeCourses(imported);
     activatePanel("reviewPanel");
@@ -115,7 +129,7 @@ async function importFromImage(event) {
     elements.ocrHint.textContent = "正在识别图片，请稍等...";
     const text = await recognizeImageText(file);
     elements.rawSchedule.value = text;
-    mergeCourses(parseScheduleText(text));
+    mergeCourses(parseScheduleText(text, { periodTimes: settings.periodTimes }));
     activatePanel("reviewPanel");
   } catch (error) {
     elements.ocrHint.textContent = `图片识别失败：${error.message}。可以先用系统相册或微信识别文字后粘贴导入。`;
@@ -164,13 +178,13 @@ function loadScript(src) {
 function addManualCourse(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  const time = resolveLessonTime(String(form.get("period")));
+  const time = resolveLessonTime(String(form.get("period")), settings.periodTimes);
   if (!time) {
     alert("节次格式请写成 1-2节、3-4节 这样的形式。");
     return;
   }
 
-  courses.push({
+  const nextCourse = {
     id: crypto.randomUUID(),
     name: String(form.get("name")).trim(),
     weekday: Number(form.get("weekday")),
@@ -180,7 +194,14 @@ function addManualCourse(event) {
     location: String(form.get("location")).trim(),
     source: "manual",
     confidence: 1,
-  });
+  };
+  const conflict = findCourseConflict(nextCourse, courses);
+  if (conflict) {
+    alert(`该时间段已有课程：${conflict.name}。请先删除冲突课程或修改节次。`);
+    return;
+  }
+
+  courses.push(nextCourse);
   event.currentTarget.reset();
   saveCourses();
   render();
@@ -194,12 +215,27 @@ function mergeCourses(imported) {
   }
 
   const existing = new Set(courses.map(courseKey));
+  const accepted = [];
+  const conflicts = [];
   const fresh = imported
     .map((course) => ({ ...course, id: crypto.randomUUID() }))
-    .filter((course) => !existing.has(courseKey(course)));
+    .filter((course) => {
+      if (existing.has(courseKey(course))) return false;
+      const conflict = findCourseConflict(course, [...courses, ...accepted]);
+      if (conflict) {
+        conflicts.push({ course, conflict });
+        return false;
+      }
+      accepted.push(course);
+      return true;
+    });
   courses = [...courses, ...fresh];
   saveCourses();
   render();
+
+  if (conflicts.length) {
+    alert(`已跳过 ${conflicts.length} 门时间冲突课程。请到“校对”页检查现有课程后再导入。`);
+  }
 }
 
 function render() {
@@ -214,6 +250,27 @@ function render() {
 
 function renderWeekGrid(currentWeek) {
   elements.weekGrid.innerHTML = "";
+  elements.weekGrid.className = "schedule-board";
+
+  const timeRail = document.createElement("aside");
+  timeRail.className = "time-rail";
+  timeRail.innerHTML = `
+    <div class="time-header">节次</div>
+    ${Object.entries(settings.periodTimes)
+      .map(
+        ([period, range]) => `
+          <div class="period-slot">
+            <strong>${period}</strong>
+            <span>${range[0]}</span>
+            <span>${range[1]}</span>
+          </div>
+        `,
+      )
+      .join("")}
+  `;
+
+  const daysBoard = document.createElement("div");
+  daysBoard.className = "days-board";
 
   for (let day = 1; day <= 7; day += 1) {
     const dayCourses = courses
@@ -227,28 +284,34 @@ function renderWeekGrid(currentWeek) {
         <span>${weekdayLabels[day]}</span>
         <span>${dayCourses.length}</span>
       </div>
-      ${
-        dayCourses.length
-          ? dayCourses.map(renderCourseCard).join("")
-          : '<div class="empty-day">本周无课</div>'
-      }
+      <div class="period-grid">
+        ${renderPeriodLines()}
+        ${dayCourses.map(renderCourseCard).join("")}
+      </div>
     `;
-    elements.weekGrid.append(column);
+    daysBoard.append(column);
   }
+
+  elements.weekGrid.append(timeRail, daysBoard);
 }
 
 function renderCourseCard(course) {
   const theme = getCourseTheme(course.name);
   return `
-    <div class="course-card" style="--course-border:${theme.border};--course-bg:${theme.bg};--course-fg:${theme.fg}">
+    <div class="course-card" style="--course-border:${theme.border};--course-bg:${theme.bg};--course-fg:${theme.fg};grid-row:${course.time.startPeriod} / ${course.time.endPeriod + 1}">
       <strong>${escapeHtml(course.name)}</strong>
       <div class="course-meta">
-        <span>${course.time.startTime}-${course.time.endTime} · ${course.time.label}</span>
         <span>${escapeHtml(course.location)}</span>
         <span>${escapeHtml(course.weeks.label)}</span>
       </div>
     </div>
   `;
+}
+
+function renderPeriodLines() {
+  return Object.keys(settings.periodTimes)
+    .map((period) => `<div class="period-line" style="grid-row:${period}"></div>`)
+    .join("");
 }
 
 function getCourseTheme(name) {
@@ -319,7 +382,11 @@ function loadCourses() {
 function loadSettings() {
   const stored = localStorage.getItem(SETTINGS_KEY);
   const fallback = getMonday(new Date()).toISOString().slice(0, 10);
-  return stored ? JSON.parse(stored) : { termStart: fallback };
+  const parsed = stored ? JSON.parse(stored) : {};
+  return {
+    termStart: parsed.termStart || fallback,
+    periodTimes: normalizePeriodSettings(parsed.periodTimes),
+  };
 }
 
 function saveCourses() {
@@ -328,6 +395,68 @@ function saveCourses() {
 
 function courseKey(course) {
   return [course.name, course.weekday, course.time.label, course.weeks.label, course.location].join("|");
+}
+
+function findCourseConflict(nextCourse, courseList) {
+  return courseList.find((course) => {
+    if (course.weekday !== nextCourse.weekday) return false;
+    if (!weeksOverlap(course.weeks, nextCourse.weeks)) return false;
+    return periodsOverlap(course.time, nextCourse.time);
+  });
+}
+
+function periodsOverlap(a, b) {
+  return a.startPeriod <= b.endPeriod && b.startPeriod <= a.endPeriod;
+}
+
+function weeksOverlap(a, b) {
+  const weeksA = expandWeeks(a);
+  const weeksB = expandWeeks(b);
+  return weeksA.some((week) => weeksB.includes(week));
+}
+
+function expandWeeks(weeks) {
+  if (weeks.type === "custom") return weeks.values;
+  const values = [];
+  for (let week = weeks.start; week <= weeks.end; week += 1) {
+    if (weeks.type === "odd" && week % 2 === 0) continue;
+    if (weeks.type === "even" && week % 2 === 1) continue;
+    values.push(week);
+  }
+  return values;
+}
+
+function normalizePeriodSettings(value) {
+  return Object.fromEntries(
+    Object.entries(DEFAULT_PERIOD_TIMES).map(([period, fallback]) => {
+      const custom = value?.[period];
+      return [period, Array.isArray(custom) && custom.length === 2 ? custom : fallback];
+    }),
+  );
+}
+
+function renderPeriodEditor() {
+  elements.periodEditor.innerHTML = Object.entries(settings.periodTimes)
+    .map(
+      ([period, range]) => `
+        <label class="period-edit-row">
+          <span>第 ${period} 节</span>
+          <input type="time" data-period="${period}" data-kind="start" value="${range[0]}" />
+          <input type="time" data-period="${period}" data-kind="end" value="${range[1]}" />
+        </label>
+      `,
+    )
+    .join("");
+}
+
+function readPeriodEditor() {
+  const next = normalizePeriodSettings(settings.periodTimes);
+  elements.periodEditor.querySelectorAll("input[data-period]").forEach((input) => {
+    const period = input.dataset.period;
+    const kind = input.dataset.kind === "start" ? 0 : 1;
+    next[period][kind] = input.value || next[period][kind];
+  });
+  return next;
 }
 
 function getMonday(date) {

@@ -131,3 +131,29 @@ test("parses OCR-style rows with noisy spacing", () => {
   assert.equal(courses[1].weeks.type, "odd");
   assert.equal(courses[1].time.startTime, "19:00");
 });
+
+test("infers period from explicit class time", () => {
+  const [course] = parseScheduleText("概率论 周一 08:00-09:40 1-16周 三教301");
+
+  assert.equal(course.time.startPeriod, 1);
+  assert.equal(course.time.endPeriod, 2);
+  assert.equal(course.time.label, "1-2节");
+  assert.equal(course.location, "三教301");
+});
+
+test("uses custom period times when resolving lessons", () => {
+  const customTimes = {
+    1: ["08:00", "08:45"],
+    2: ["08:55", "09:40"],
+    3: ["10:00", "10:45"],
+    4: ["10:55", "11:40"],
+  };
+
+  assert.deepEqual(resolveLessonTime("第3-4节", customTimes), {
+    startPeriod: 3,
+    endPeriod: 4,
+    startTime: "10:00",
+    endTime: "11:40",
+    label: "3-4节",
+  });
+});

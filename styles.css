@@ -158,9 +158,56 @@ textarea {
   display: block;
 }
 
-.week-grid {
+.schedule-board {
   display: grid;
-  gap: 10px;
+  grid-template-columns: 72px minmax(760px, 1fr);
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.time-rail {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 48px repeat(12, 76px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.96);
+  overflow: hidden;
+}
+
+.time-header {
+  display: grid;
+  place-items: center;
+  background: var(--soft);
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.period-slot {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 8px 10px;
+  border-top: 1px solid rgba(221, 213, 198, 0.78);
+}
+
+.period-slot strong {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.period-slot span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.days-board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(108px, 1fr));
+  gap: 8px;
 }
 
 .day-column {
@@ -173,13 +220,26 @@ textarea {
 .day-header {
   display: flex;
   justify-content: space-between;
+  min-height: 48px;
   padding: 12px 14px;
   background: var(--soft);
   font-weight: 700;
 }
 
+.period-grid {
+  display: grid;
+  grid-template-rows: repeat(12, 76px);
+  position: relative;
+}
+
+.period-line {
+  border-top: 1px solid rgba(221, 213, 198, 0.72);
+}
+
 .course-card {
-  margin: 10px;
+  z-index: 1;
+  min-width: 0;
+  margin: 4px 6px;
   padding: 12px;
   border-left: 4px solid var(--course-border, var(--accent));
   border-radius: 8px;
@@ -191,7 +251,7 @@ textarea {
 .course-card strong {
   display: block;
   margin-bottom: 6px;
-  font-size: 16px;
+  font-size: 14px;
   color: var(--course-fg, var(--ink));
 }
 
@@ -285,18 +345,36 @@ dialog::backdrop {
   font-size: 20px;
 }
 
+.period-settings {
+  display: grid;
+  gap: 10px;
+}
+
+.period-settings h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.period-editor {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.period-edit-row {
+  grid-template-columns: 72px 1fr 1fr;
+  align-items: center;
+}
+
 @media (min-width: 760px) {
   .app-shell {
-    width: min(100%, 1100px);
-  }
-
-  .week-grid {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    align-items: start;
+    width: min(100%, 1180px);
   }
 
   .day-column {
-    min-height: 560px;
+    min-height: 960px;
   }
 }
 

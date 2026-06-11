@@ -33,20 +33,44 @@ const WEEKDAY_MAP = new Map([
 
 const WEEKDAY_LABELS = ["", "周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
-export function resolveLessonTime(rawValue) {
+export function resolveLessonTime(rawValue, scheduleTimes = PERIOD_TIMES) {
   const match = String(rawValue).match(/(?:第)?\s*(\d{1,2})(?:\s*[-~至,，]\s*(\d{1,2}))?\s*节/);
-  if (!match) return null;
+  if (!match) return resolveExplicitTime(rawValue, scheduleTimes);
 
   const startPeriod = Number(match[1]);
   const endPeriod = Number(match[2] || match[1]);
-  const startTime = PERIOD_TIMES[startPeriod]?.[0] || "";
-  const endTime = PERIOD_TIMES[endPeriod]?.[1] || "";
+  const startTime = scheduleTimes[startPeriod]?.[0] || "";
+  const endTime = scheduleTimes[endPeriod]?.[1] || "";
 
   return {
     startPeriod,
     endPeriod,
     startTime,
     endTime,
+    label: `${startPeriod}-${endPeriod}节`,
+  };
+}
+
+function resolveExplicitTime(rawValue, scheduleTimes = PERIOD_TIMES) {
+  const match = String(rawValue).match(/(\d{1,2}:\d{2})\s*[-~至]\s*(\d{1,2}:\d{2})/);
+  if (!match) return null;
+
+  const [, explicitStart, explicitEnd] = match;
+  const entries = Object.entries(scheduleTimes).map(([period, range]) => ({
+    period: Number(period),
+    start: range[0],
+    end: range[1],
+  }));
+  const startPeriod = entries.find((entry) => entry.start === explicitStart)?.period;
+  const endPeriod = entries.find((entry) => entry.end === explicitEnd)?.period;
+
+  if (!startPeriod || !endPeriod) return null;
+
+  return {
+    startPeriod,
+    endPeriod,
+    startTime: explicitStart,
+    endTime: explicitEnd,
     label: `${startPeriod}-${endPeriod}节`,
   };
 }
@@ -80,7 +104,8 @@ export function normalizeWeeks(rawValue) {
   return { start: single, end: single, type, label: value || `${single}周` };
 }
 
-export function parseScheduleText(text) {
+export function parseScheduleText(text, options = {}) {
+  const scheduleTimes = options.periodTimes || PERIOD_TIMES;
   const lines = String(text)
     .replace(/<[^>]+>/g, "\n")
     .replace(/[|；;]/g, "\n")
@@ -92,7 +117,7 @@ export function parseScheduleText(text) {
   let pendingName = "";
 
   for (const line of lines) {
-    const parsed = parseLine(line, pendingName, courses.length);
+    const parsed = parseLine(line, pendingName, courses.length, scheduleTimes);
     if (parsed) {
       courses.push(parsed);
       pendingName = "";
@@ -104,9 +129,9 @@ export function parseScheduleText(text) {
   return courses;
 }
 
-function parseLine(line, pendingName, index) {
+function parseLine(line, pendingName, index, scheduleTimes) {
   const weekday = extractWeekday(line);
-  const time = resolveLessonTime(line);
+  const time = resolveLessonTime(line, scheduleTimes);
   const weekText = extractWeekText(line);
 
   if (!weekday || !time || !weekText) return null;
@@ -151,6 +176,7 @@ function extractInlineName(line, weekdayRaw, timeLabel, weekText) {
 function extractLocation(line, name, weekdayRaw, timeLabel, weekText) {
   let location = line;
   location = location.replace(/第?\s*\d{1,2}\s*[-~至,，]\s*\d{1,2}\s*节/g, " ");
+  location = location.replace(/\d{1,2}:\d{2}\s*[-~至]\s*\d{1,2}:\d{2}/g, " ");
   for (const token of [name, weekdayRaw, timeLabel, `第${timeLabel}`, weekText]) {
     if (token) location = location.replace(token, " ");
   }
