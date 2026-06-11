@@ -1,8 +1,8 @@
 # StayUp课表 Android Release
 
-版本：1.2.0
+版本：1.3.0
 
-这是 Android PWA 分发包。解压后可用本地静态服务预览；部署到 HTTPS 站点后，使用 Chrome 打开并选择“添加到主屏幕”即可获得接近原生 App 的启动体验。
+这是 Android PWA 分发包。仓库还配置了 GitHub Actions，会在 tag 发布时自动构建可安装的 `StayUp-schedule-debug.apk`，可直接下载到 Android 手机测试。
 
 ## 发布内容
 

@@ -1,0 +1,8 @@
+{
+  "appId": "com.stayup.schedule",
+  "appName": "StayUp课表",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
