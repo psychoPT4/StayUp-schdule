@@ -29,11 +29,6 @@ const elements = {
   weekGrid: document.querySelector("#weekGrid"),
   rawSchedule: document.querySelector("#rawSchedule"),
   importUrl: document.querySelector("#importUrl"),
-  schoolName: document.querySelector("#schoolName"),
-  systemType: document.querySelector("#systemType"),
-  schoolPortal: document.querySelector("#schoolPortal"),
-  schoolImportButton: document.querySelector("#schoolImportButton"),
-  schoolImportHint: document.querySelector("#schoolImportHint"),
   parseButton: document.querySelector("#parseButton"),
   fetchButton: document.querySelector("#fetchButton"),
   imageInput: document.querySelector("#imageInput"),
@@ -56,10 +51,6 @@ function bindEvents() {
     button.addEventListener("click", () => activatePanel(button.dataset.panel));
   });
 
-  document.querySelectorAll("[data-panel-target]").forEach((button) => {
-    button.addEventListener("click", () => activatePanel(button.dataset.panelTarget));
-  });
-
   elements.parseButton.addEventListener("click", () => {
     const imported = parseScheduleText(elements.rawSchedule.value);
     mergeCourses(imported);
@@ -67,7 +58,6 @@ function bindEvents() {
     activatePanel("reviewPanel");
   });
 
-  elements.schoolImportButton.addEventListener("click", importFromSchoolPortal);
   elements.fetchButton.addEventListener("click", importFromUrl);
   elements.imageInput.addEventListener("change", importFromImage);
   elements.courseForm.addEventListener("submit", addManualCourse);
@@ -115,21 +105,6 @@ async function importFromUrl() {
   } catch (error) {
     elements.rawSchedule.value = `无法直接读取该网站，请登录教务系统后复制课表文字粘贴到这里。\n\n错误：${error.message}`;
   }
-}
-
-async function importFromSchoolPortal() {
-  const portal = elements.schoolPortal.value.trim();
-  const school = elements.schoolName.value.trim() || "你的学校";
-  const system = elements.systemType.options[elements.systemType.selectedIndex].textContent;
-
-  elements.schoolImportHint.textContent = `${school}（${system}）：如果你已经登录教务系统，我会尝试读取课表页；失败时请复制课表文字到下方。`;
-  if (!portal) {
-    elements.rawSchedule.value = `请先登录${school}教务系统，打开课表页，复制页面里的课程表文字后粘贴到这里。\n\n建议格式：课程名 周几 第几节 第几周 地点`;
-    return;
-  }
-
-  elements.importUrl.value = portal;
-  await importFromUrl();
 }
 
 async function importFromImage(event) {

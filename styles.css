@@ -122,33 +122,6 @@ textarea {
   font-weight: 700;
 }
 
-.quick-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.quick-card {
-  display: grid;
-  gap: 3px;
-  justify-items: start;
-  min-height: 68px;
-  padding: 12px 14px;
-  border: 1px solid rgba(31, 111, 104, 0.18);
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: 0 10px 22px rgba(21, 32, 30, 0.08);
-}
-
-.quick-card span {
-  font-weight: 800;
-}
-
-.quick-card small {
-  color: var(--muted);
-}
-
 .tabs {
   position: sticky;
   top: 0;
@@ -246,12 +219,6 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-}
-
-.school-import {
-  border-color: rgba(31, 111, 104, 0.28);
-  background:
-    linear-gradient(135deg, rgba(231, 242, 238, 0.95), rgba(255, 253, 248, 0.95));
 }
 
 .inline-row {

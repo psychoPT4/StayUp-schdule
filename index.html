@@ -27,17 +27,6 @@
         <div id="nextClass" class="next-class">暂无课程</div>
       </section>
 
-      <section class="quick-actions" aria-label="快捷入口">
-        <button class="quick-card" data-panel-target="importPanel">
-          <span>导入</span>
-          <small>网页 / OCR</small>
-        </button>
-        <button class="quick-card" data-panel-target="manualPanel">
-          <span>添加</span>
-          <small>手动录入</small>
-        </button>
-      </section>
-
       <nav class="tabs" aria-label="功能切换">
         <button class="tab active" data-panel="schedulePanel">课表</button>
         <button class="tab" data-panel="importPanel">导入</button>
@@ -50,31 +39,13 @@
       </section>
 
       <section class="panel" id="importPanel">
-        <div class="control-block school-import">
-          <label for="schoolName">学校 / 教务系统导入</label>
-          <div class="form-grid">
-            <input id="schoolName" placeholder="学校名称，例如：某某大学" />
-            <select id="systemType">
-              <option value="zhengfang">正方教务</option>
-              <option value="qingguo">青果教务</option>
-              <option value="urp">URP / 综合教务</option>
-              <option value="custom">其他系统</option>
-            </select>
-          </div>
-          <div class="inline-row">
-            <input id="schoolPortal" inputmode="url" placeholder="教务系统课表页 URL，可选" />
-            <button id="schoolImportButton">开始</button>
-          </div>
-          <p class="hint" id="schoolImportHint">当前版本不保存教务密码；请先登录学校教务系统，再尝试读取课表页或复制课表文字导入。</p>
-        </div>
-
         <div class="control-block">
-          <label for="importUrl">教务系统或课表网页地址</label>
+          <label for="importUrl">从网页导入</label>
           <div class="inline-row">
-            <input id="importUrl" inputmode="url" placeholder="https://..." />
-            <button id="fetchButton">读取</button>
+            <input id="importUrl" inputmode="url" placeholder="粘贴登录后的课表页 URL，可选" />
+            <button id="fetchButton">尝试读取</button>
           </div>
-          <p class="hint">如果学校网站阻止跨站读取，登录后复制课表文字到下方即可。</p>
+          <p class="hint">多数学校教务系统会限制跨站读取；失败时请登录教务系统后复制课表文字到下方。</p>
         </div>
 
         <div class="control-block">
