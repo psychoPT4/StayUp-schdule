@@ -43,6 +43,22 @@ button {
   padding: 0 16px;
 }
 
+button.secondary,
+button.ghost {
+  background: var(--surface);
+  color: var(--primary);
+  border: 1px solid var(--line);
+}
+
+button.ghost {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.danger-text {
+  color: var(--danger);
+}
+
 input,
 select,
 textarea {
@@ -171,7 +187,7 @@ textarea {
   left: 0;
   z-index: 1;
   display: grid;
-  grid-template-rows: 48px repeat(12, 76px);
+  grid-template-rows: 48px repeat(var(--period-count), 76px);
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 253, 248, 0.96);
@@ -228,7 +244,7 @@ textarea {
 
 .period-grid {
   display: grid;
-  grid-template-rows: repeat(12, 76px);
+  grid-template-rows: repeat(var(--period-count), 76px);
   position: relative;
 }
 
@@ -364,7 +380,7 @@ dialog::backdrop {
 }
 
 .period-edit-row {
-  grid-template-columns: 72px 1fr 1fr;
+  grid-template-columns: 72px 1fr 1fr auto;
   align-items: center;
 }
 

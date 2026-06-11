@@ -47,6 +47,7 @@ const elements = {
   settingsDialog: document.querySelector("#settingsDialog"),
   termStart: document.querySelector("#termStart"),
   periodEditor: document.querySelector("#periodEditor"),
+  addPeriodButton: document.querySelector("#addPeriodButton"),
   saveSettings: document.querySelector("#saveSettings"),
 };
 
@@ -68,6 +69,7 @@ function bindEvents() {
   elements.fetchButton.addEventListener("click", importFromUrl);
   elements.imageInput.addEventListener("change", importFromImage);
   elements.courseForm.addEventListener("submit", addManualCourse);
+  elements.addPeriodButton.addEventListener("click", addPeriodEditorRow);
 
   elements.clearButton.addEventListener("click", () => {
     if (!confirm("确定清空所有课程吗？")) return;
@@ -254,9 +256,10 @@ function renderWeekGrid(currentWeek) {
 
   const timeRail = document.createElement("aside");
   timeRail.className = "time-rail";
+  timeRail.style.setProperty("--period-count", getPeriodEntries().length);
   timeRail.innerHTML = `
     <div class="time-header">节次</div>
-    ${Object.entries(settings.periodTimes)
+    ${getPeriodEntries()
       .map(
         ([period, range]) => `
           <div class="period-slot">
@@ -274,7 +277,7 @@ function renderWeekGrid(currentWeek) {
 
   for (let day = 1; day <= 7; day += 1) {
     const dayCourses = courses
-      .filter((course) => course.weekday === day && courseAppliesToWeek(course, currentWeek))
+      .filter((course) => course.weekday === day && courseAppliesToWeek(course, currentWeek) && courseFitsCurrentPeriods(course))
       .sort((a, b) => a.time.startPeriod - b.time.startPeriod);
 
     const column = document.createElement("article");
@@ -284,7 +287,7 @@ function renderWeekGrid(currentWeek) {
         <span>${weekdayLabels[day]}</span>
         <span>${dayCourses.length}</span>
       </div>
-      <div class="period-grid">
+      <div class="period-grid" style="--period-count:${getPeriodEntries().length}">
         ${renderPeriodLines()}
         ${dayCourses.map(renderCourseCard).join("")}
       </div>
@@ -309,8 +312,8 @@ function renderCourseCard(course) {
 }
 
 function renderPeriodLines() {
-  return Object.keys(settings.periodTimes)
-    .map((period) => `<div class="period-line" style="grid-row:${period}"></div>`)
+  return getPeriodEntries()
+    .map(([period]) => `<div class="period-line" style="grid-row:${period}"></div>`)
     .join("");
 }
 
@@ -364,6 +367,11 @@ function courseAppliesToWeek(course, week) {
   if (course.weeks.type === "odd") return week % 2 === 1;
   if (course.weeks.type === "even") return week % 2 === 0;
   return true;
+}
+
+function courseFitsCurrentPeriods(course) {
+  const maxPeriod = getPeriodEntries().length;
+  return course.time.startPeriod >= 1 && course.time.endPeriod <= maxPeriod;
 }
 
 function getCurrentWeek() {
@@ -427,26 +435,42 @@ function expandWeeks(weeks) {
 }
 
 function normalizePeriodSettings(value) {
+  const source = value && Object.keys(value).length ? value : DEFAULT_PERIOD_TIMES;
   return Object.fromEntries(
-    Object.entries(DEFAULT_PERIOD_TIMES).map(([period, fallback]) => {
-      const custom = value?.[period];
-      return [period, Array.isArray(custom) && custom.length === 2 ? custom : fallback];
-    }),
+    Object.entries(source)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([period, fallback]) => {
+        const custom = value?.[period];
+        return [period, Array.isArray(custom) && custom.length === 2 ? custom : fallback];
+      }),
   );
 }
 
 function renderPeriodEditor() {
-  elements.periodEditor.innerHTML = Object.entries(settings.periodTimes)
+  elements.periodEditor.innerHTML = getPeriodEntries()
     .map(
       ([period, range]) => `
         <label class="period-edit-row">
           <span>第 ${period} 节</span>
           <input type="time" data-period="${period}" data-kind="start" value="${range[0]}" />
           <input type="time" data-period="${period}" data-kind="end" value="${range[1]}" />
+          <button type="button" class="ghost danger-text" data-delete-period="${period}" aria-label="删除第 ${period} 节">删除</button>
         </label>
       `,
     )
     .join("");
+
+  elements.periodEditor.querySelectorAll("[data-delete-period]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (getPeriodEntries().length <= 1) {
+        alert("至少保留一节课。");
+        return;
+      }
+      delete settings.periodTimes[button.dataset.deletePeriod];
+      renumberPeriodSettings();
+      renderPeriodEditor();
+    });
+  });
 }
 
 function readPeriodEditor() {
@@ -457,6 +481,38 @@ function readPeriodEditor() {
     next[period][kind] = input.value || next[period][kind];
   });
   return next;
+}
+
+function addPeriodEditorRow() {
+  const entries = getPeriodEntries();
+  const last = entries.at(-1)?.[1] || ["08:00", "08:45"];
+  const nextPeriod = String(entries.length + 1);
+  settings.periodTimes[nextPeriod] = suggestNextPeriodTime(last);
+  renderPeriodEditor();
+}
+
+function suggestNextPeriodTime(previousRange) {
+  const start = addMinutes(previousRange[1], 10);
+  const end = addMinutes(start, 45);
+  return [start, end];
+}
+
+function addMinutes(value, minutes) {
+  const [hour, minute] = value.split(":").map(Number);
+  const total = hour * 60 + minute + minutes;
+  const nextHour = Math.floor(total / 60) % 24;
+  const nextMinute = total % 60;
+  return `${String(nextHour).padStart(2, "0")}:${String(nextMinute).padStart(2, "0")}`;
+}
+
+function renumberPeriodSettings() {
+  settings.periodTimes = Object.fromEntries(
+    getPeriodEntries().map(([, range], index) => [String(index + 1), range]),
+  );
+}
+
+function getPeriodEntries() {
+  return Object.entries(settings.periodTimes).sort(([a], [b]) => Number(a) - Number(b));
 }
 
 function getMonday(date) {

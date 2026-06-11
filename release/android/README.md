@@ -1,8 +1,8 @@
 # StayUp课表 Android Release
 
-版本：1.1.0
+版本：1.2.0
 
-这是 Android PWA 分发包。部署到 HTTPS 站点后，使用 Chrome 打开并选择“添加到主屏幕”即可获得接近原生 App 的启动体验。
+这是 Android PWA 分发包。解压后可用本地静态服务预览；部署到 HTTPS 站点后，使用 Chrome 打开并选择“添加到主屏幕”即可获得接近原生 App 的启动体验。
 
 ## 发布内容
 
