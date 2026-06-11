@@ -1,0 +1,294 @@
+:root {
+  color-scheme: light;
+  --ink: #17211f;
+  --muted: #69736f;
+  --surface: #fffdf8;
+  --paper: #f7f4ee;
+  --line: #ded8cc;
+  --primary: #195d5a;
+  --primary-2: #0f7c72;
+  --accent: #f0b35a;
+  --danger: #b74235;
+  --shadow: 0 18px 38px rgba(23, 33, 31, 0.12);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  min-height: 44px;
+  padding: 0 16px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  padding: 12px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.app-shell {
+  width: min(100%, 520px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: max(18px, env(safe-area-inset-top)) 14px max(22px, env(safe-area-inset-bottom));
+}
+
+.topbar,
+.today-strip,
+.review-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.topbar h1 {
+  margin: 2px 0 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.eyebrow,
+.muted,
+.hint {
+  color: var(--muted);
+  margin: 0;
+  font-size: 13px;
+}
+
+.icon-button {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.today-strip {
+  margin: 18px 0 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.next-class {
+  max-width: 68%;
+  text-align: right;
+  font-size: 14px;
+}
+
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 8px 0;
+  background: var(--paper);
+}
+
+.tab {
+  min-height: 38px;
+  padding: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.tab.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: white;
+}
+
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+}
+
+.week-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.day-column {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #e8f0ec;
+  font-weight: 700;
+}
+
+.course-card {
+  margin: 10px;
+  padding: 12px;
+  border-left: 5px solid var(--accent);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 8px 18px rgba(23, 33, 31, 0.08);
+}
+
+.course-card strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 16px;
+}
+
+.course-meta {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.empty-day,
+.empty-state {
+  padding: 14px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.control-block,
+.course-form,
+.dialog-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.inline-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+label > input,
+label > select {
+  color: var(--ink);
+}
+
+.review-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.review-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.review-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.danger {
+  background: var(--danger);
+}
+
+dialog {
+  width: min(92vw, 420px);
+  border: 0;
+  border-radius: 12px;
+  padding: 0;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.dialog-card h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+@media (min-width: 760px) {
+  .app-shell {
+    width: min(100%, 1100px);
+  }
+
+  .week-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .day-column {
+    min-height: 560px;
+  }
+}
+
+@media (max-width: 380px) {
+  .form-grid,
+  .inline-row {
+    grid-template-columns: 1fr;
+  }
+
+  .next-class {
+    max-width: 60%;
+  }
+}

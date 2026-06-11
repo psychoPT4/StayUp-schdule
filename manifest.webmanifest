@@ -1,0 +1,16 @@
+{
+  "name": "课表助手",
+  "short_name": "课表",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f7f4ee",
+  "theme_color": "#195d5a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
