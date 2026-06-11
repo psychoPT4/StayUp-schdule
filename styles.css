@@ -176,15 +176,14 @@ textarea {
 
 .schedule-board {
   display: grid;
-  grid-template-columns: 72px minmax(760px, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: 8px;
-  overflow-x: auto;
+  overflow: visible;
   padding-bottom: 8px;
 }
 
 .time-rail {
-  position: sticky;
-  left: 0;
+  position: relative;
   z-index: 1;
   display: grid;
   grid-template-rows: 48px repeat(var(--period-count), 76px);
@@ -222,8 +221,9 @@ textarea {
 
 .days-board {
   display: grid;
-  grid-template-columns: repeat(7, minmax(108px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+  min-width: 0;
 }
 
 .day-column {
@@ -231,6 +231,10 @@ textarea {
   border-radius: 8px;
   background: var(--surface);
   overflow: hidden;
+}
+
+.day-column:not(.is-active-day) {
+  display: none;
 }
 
 .day-header {
@@ -256,7 +260,7 @@ textarea {
   z-index: 1;
   min-width: 0;
   margin: 4px 6px;
-  padding: 12px;
+  padding: 10px;
   border-left: 4px solid var(--course-border, var(--accent));
   border-radius: 8px;
   background:
@@ -267,7 +271,7 @@ textarea {
 .course-card strong {
   display: block;
   margin-bottom: 6px;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--course-fg, var(--ink));
 }
 
@@ -275,7 +279,7 @@ textarea {
   display: grid;
   gap: 4px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .empty-day,
@@ -361,12 +365,14 @@ dialog::backdrop {
   font-size: 20px;
 }
 
-.period-settings {
+.period-settings,
+.schedule-settings {
   display: grid;
   gap: 10px;
 }
 
-.period-settings h3 {
+.period-settings h3,
+.schedule-settings h3 {
   margin: 0;
   font-size: 15px;
 }
@@ -387,6 +393,19 @@ dialog::backdrop {
 @media (min-width: 760px) {
   .app-shell {
     width: min(100%, 1180px);
+  }
+
+  .schedule-board {
+    grid-template-columns: 72px minmax(760px, 1fr);
+    overflow-x: auto;
+  }
+
+  .days-board {
+    grid-template-columns: repeat(7, minmax(108px, 1fr));
+  }
+
+  .day-column:not(.is-active-day) {
+    display: block;
   }
 
   .day-column {

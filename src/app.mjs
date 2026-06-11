@@ -7,6 +7,7 @@ import {
 } from "./parser.mjs";
 
 const STORAGE_KEY = "mobile-schedule-courses";
+const SCHEDULES_KEY = "mobile-schedule-books";
 const SETTINGS_KEY = "mobile-schedule-settings";
 const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
 const COURSE_THEMES = [
@@ -25,11 +26,13 @@ const sampleCourses = parseScheduleText(`
 数据结构 周五 7-8节 1-8周 计算机楼B204
 `);
 
-let courses = loadCourses();
+let scheduleState = loadScheduleState();
+let courses = getActiveSchedule().courses;
 let settings = loadSettings();
 
 const elements = {
   currentWeek: document.querySelector("#currentWeek"),
+  activeScheduleName: document.querySelector("#activeScheduleName"),
   todayLabel: document.querySelector("#todayLabel"),
   nextClass: document.querySelector("#nextClass"),
   weekGrid: document.querySelector("#weekGrid"),
@@ -46,6 +49,10 @@ const elements = {
   settingsButton: document.querySelector("#settingsButton"),
   settingsDialog: document.querySelector("#settingsDialog"),
   termStart: document.querySelector("#termStart"),
+  scheduleSelect: document.querySelector("#scheduleSelect"),
+  newScheduleName: document.querySelector("#newScheduleName"),
+  addScheduleButton: document.querySelector("#addScheduleButton"),
+  deleteScheduleButton: document.querySelector("#deleteScheduleButton"),
   periodEditor: document.querySelector("#periodEditor"),
   addPeriodButton: document.querySelector("#addPeriodButton"),
   saveSettings: document.querySelector("#saveSettings"),
@@ -69,17 +76,21 @@ function bindEvents() {
   elements.fetchButton.addEventListener("click", importFromUrl);
   elements.imageInput.addEventListener("change", importFromImage);
   elements.courseForm.addEventListener("submit", addManualCourse);
+  elements.scheduleSelect.addEventListener("change", switchSchedule);
+  elements.addScheduleButton.addEventListener("click", addSchedule);
+  elements.deleteScheduleButton.addEventListener("click", deleteActiveSchedule);
   elements.addPeriodButton.addEventListener("click", addPeriodEditorRow);
 
   elements.clearButton.addEventListener("click", () => {
     if (!confirm("确定清空所有课程吗？")) return;
     courses = [];
-    saveCourses();
+    saveCoursesToActiveSchedule();
     render();
   });
 
   elements.settingsButton.addEventListener("click", () => {
     elements.termStart.value = settings.termStart;
+    renderScheduleManager();
     renderPeriodEditor();
     elements.settingsDialog.showModal();
   });
@@ -92,7 +103,7 @@ function bindEvents() {
       ...course,
       time: resolveLessonTime(course.time.label, settings.periodTimes) || course.time,
     }));
-    saveCourses();
+    saveCoursesToActiveSchedule();
     render();
   });
 }
@@ -205,7 +216,7 @@ function addManualCourse(event) {
 
   courses.push(nextCourse);
   event.currentTarget.reset();
-  saveCourses();
+  saveCoursesToActiveSchedule();
   render();
   activatePanel("schedulePanel");
 }
@@ -232,7 +243,7 @@ function mergeCourses(imported) {
       return true;
     });
   courses = [...courses, ...fresh];
-  saveCourses();
+  saveCoursesToActiveSchedule();
   render();
 
   if (conflicts.length) {
@@ -243,6 +254,8 @@ function mergeCourses(imported) {
 function render() {
   const currentWeek = getCurrentWeek();
   const today = new Date().getDay() || 7;
+  courses = getActiveSchedule().courses;
+  elements.activeScheduleName.textContent = getActiveSchedule().name;
   elements.currentWeek.textContent = currentWeek;
   elements.todayLabel.textContent = weekdayLabels[today];
   renderWeekGrid(currentWeek);
@@ -253,6 +266,7 @@ function render() {
 function renderWeekGrid(currentWeek) {
   elements.weekGrid.innerHTML = "";
   elements.weekGrid.className = "schedule-board";
+  const today = new Date().getDay() || 7;
 
   const timeRail = document.createElement("aside");
   timeRail.className = "time-rail";
@@ -282,6 +296,8 @@ function renderWeekGrid(currentWeek) {
 
     const column = document.createElement("article");
     column.className = "day-column";
+    column.dataset.weekday = String(day);
+    if (day === today) column.classList.add("is-active-day");
     column.innerHTML = `
       <div class="day-header">
         <span>${weekdayLabels[day]}</span>
@@ -355,7 +371,7 @@ function renderReviewList() {
   elements.reviewList.querySelectorAll("[data-delete]").forEach((button) => {
     button.addEventListener("click", () => {
       courses = courses.filter((course) => course.id !== button.dataset.delete);
-      saveCourses();
+      saveCoursesToActiveSchedule();
       render();
     });
   });
@@ -385,6 +401,81 @@ function getCurrentWeek() {
 function loadCourses() {
   const stored = localStorage.getItem(STORAGE_KEY);
   return stored ? JSON.parse(stored) : sampleCourses;
+}
+
+function loadScheduleState() {
+  const stored = localStorage.getItem(SCHEDULES_KEY);
+  if (stored) return JSON.parse(stored);
+  return {
+    activeId: "default",
+    schedules: [
+      {
+        id: "default",
+        name: "默认课表",
+        courses: loadCourses(),
+      },
+    ],
+  };
+}
+
+function getActiveSchedule() {
+  return scheduleState.schedules.find((schedule) => schedule.id === scheduleState.activeId) || scheduleState.schedules[0];
+}
+
+function saveScheduleState() {
+  localStorage.setItem(SCHEDULES_KEY, JSON.stringify(scheduleState));
+}
+
+function saveCoursesToActiveSchedule() {
+  const active = getActiveSchedule();
+  active.courses = courses;
+  saveScheduleState();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
+}
+
+function renderScheduleManager() {
+  elements.scheduleSelect.innerHTML = scheduleState.schedules
+    .map((schedule) => `<option value="${schedule.id}">${escapeHtml(schedule.name)}</option>`)
+    .join("");
+  elements.scheduleSelect.value = getActiveSchedule().id;
+}
+
+function switchSchedule() {
+  scheduleState.activeId = elements.scheduleSelect.value;
+  courses = getActiveSchedule().courses;
+  saveScheduleState();
+  render();
+}
+
+function addSchedule() {
+  const name = elements.newScheduleName.value.trim();
+  if (!name) {
+    alert("请输入课表名称。");
+    return;
+  }
+  const id = `schedule-${Date.now()}`;
+  scheduleState.schedules.push({ id, name, courses: [] });
+  scheduleState.activeId = id;
+  courses = [];
+  elements.newScheduleName.value = "";
+  saveScheduleState();
+  renderScheduleManager();
+  render();
+}
+
+function deleteActiveSchedule() {
+  if (scheduleState.schedules.length <= 1) {
+    alert("至少保留一个课表。");
+    return;
+  }
+  const active = getActiveSchedule();
+  if (!confirm(`确定删除“${active.name}”吗？`)) return;
+  scheduleState.schedules = scheduleState.schedules.filter((schedule) => schedule.id !== active.id);
+  scheduleState.activeId = scheduleState.schedules[0].id;
+  courses = getActiveSchedule().courses;
+  saveScheduleState();
+  renderScheduleManager();
+  render();
 }
 
 function loadSettings() {

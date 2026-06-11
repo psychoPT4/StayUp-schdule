@@ -14,7 +14,7 @@
         <div>
           <p class="eyebrow">第 <span id="currentWeek">1</span> 周</p>
           <h1>StayUp课表</h1>
-          <p class="subtitle">导入、校对、每天准时上课</p>
+          <p class="subtitle"><span id="activeScheduleName">默认课表</span> · 导入、校对、每天准时上课</p>
         </div>
         <button class="icon-button" id="settingsButton" aria-label="设置开学日期">设置</button>
       </header>
@@ -98,6 +98,17 @@
     <dialog id="settingsDialog">
       <form method="dialog" class="dialog-card">
         <h2>学期设置</h2>
+        <section class="schedule-settings">
+          <h3>课表管理</h3>
+          <label>当前课表
+            <select id="scheduleSelect"></select>
+          </label>
+          <div class="inline-row">
+            <input id="newScheduleName" placeholder="新课表名称，例如：大一下" />
+            <button type="button" class="secondary" id="addScheduleButton">新建</button>
+          </div>
+          <button type="button" class="ghost danger-text" id="deleteScheduleButton">删除当前课表</button>
+        </section>
         <label>开学第一周周一
           <input id="termStart" type="date" />
         </label>
