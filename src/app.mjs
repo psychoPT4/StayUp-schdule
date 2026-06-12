@@ -1,5 +1,6 @@
 import {
   normalizeWeeks,
+  parseCourseBlockText,
   parseScheduleText,
   periodTimes as DEFAULT_PERIOD_TIMES,
   resolveLessonTime,
@@ -151,35 +152,213 @@ async function importFromImage(event) {
   if (!file) return;
 
   try {
-    elements.ocrHint.textContent = "正在识别图片，请稍等...";
-    const text = await recognizeImageText(file);
+    elements.ocrHint.textContent = "正在识别图片并恢复课表结构，请稍等...";
+    const { text, courses: imageCourses } = await recognizeImageSchedule(file);
     elements.rawSchedule.value = text;
-    mergeCourses(parseScheduleText(text, { periodTimes: settings.periodTimes }));
+    const imported = imageCourses.length ? imageCourses : parseScheduleText(text, { periodTimes: settings.periodTimes });
+    ensurePeriodCount(Math.max(0, ...imported.map((course) => course.time.endPeriod)));
+    mergeCourses(imported);
     activatePanel("reviewPanel");
   } catch (error) {
     elements.ocrHint.textContent = `图片识别失败：${error.message}。可以先用系统相册或微信识别文字后粘贴导入。`;
   }
 }
 
-async function recognizeImageText(file) {
-  if ("TextDetector" in window) {
+async function recognizeImageSchedule(file) {
+  const prepared = await prepareScheduleImage(file);
+
+  try {
+    await loadScript(TESSERACT_CDN);
+    if (!window.Tesseract) throw new Error("OCR 模块加载失败");
+
+    const result = await window.Tesseract.recognize(prepared.canvas, "chi_sim+eng", {
+      logger(message) {
+        if (message.status === "recognizing text") {
+          elements.ocrHint.textContent = `正在识别图片：${Math.round(message.progress * 100)}%`;
+        }
+      },
+    });
+
+    const words = normalizeOcrWords(result.data?.words || []);
+    return {
+      text: result.data?.text || "",
+      courses: parseSpatialScheduleWords(words, prepared.canvas, settings.periodTimes),
+    };
+  } catch (error) {
+    if (!("TextDetector" in window)) throw error;
     const bitmap = await createImageBitmap(file);
     const detector = new window.TextDetector();
     const detected = await detector.detect(bitmap);
-    return detected.map((item) => item.rawValue).join("\n");
+    return {
+      text: detected.map((item) => item.rawValue).join("\n"),
+      courses: [],
+    };
+  }
+}
+
+async function prepareScheduleImage(file) {
+  const bitmap = await createImageBitmap(file);
+  const crop = {
+    x: 0,
+    y: Math.round(bitmap.height * 0.14),
+    width: bitmap.width,
+    height: Math.round(bitmap.height * 0.62),
+  };
+  const scale = 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = crop.width * scale;
+  canvas.height = crop.height * scale;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  context.imageSmoothingEnabled = true;
+  context.filter = "grayscale(1) contrast(1.45) brightness(1.08)";
+  context.drawImage(bitmap, crop.x, crop.y, crop.width, crop.height, 0, 0, canvas.width, canvas.height);
+  return { canvas };
+}
+
+function normalizeOcrWords(words) {
+  return words
+    .map((word) => ({
+      text: String(word.text || "").trim(),
+      confidence: Number(word.confidence ?? 0),
+      x0: word.bbox?.x0 ?? word.x0 ?? 0,
+      y0: word.bbox?.y0 ?? word.y0 ?? 0,
+      x1: word.bbox?.x1 ?? word.x1 ?? 0,
+      y1: word.bbox?.y1 ?? word.y1 ?? 0,
+    }))
+    .filter((word) => word.text && word.confidence > 20);
+}
+
+function parseSpatialScheduleWords(words, canvas, periodTimes) {
+  const weekdayCenters = findWeekdayCenters(words, canvas.width);
+  if (weekdayCenters.length < 2) return [];
+
+  const grid = inferScheduleGrid(words, canvas, weekdayCenters);
+  const columns = weekdayCenters.map((center) => ({ ...center, words: [] }));
+  const minCourseX = Math.min(...weekdayCenters.map((center) => center.x)) - grid.columnWidth / 2;
+
+  for (const word of words) {
+    const x = (word.x0 + word.x1) / 2;
+    const y = (word.y0 + word.y1) / 2;
+    if (x < minCourseX || y < grid.top || y > grid.bottom) continue;
+    if (isTableNoise(word.text)) continue;
+    const column = nearestColumn(columns, x, grid.columnWidth);
+    if (column) column.words.push(word);
   }
 
-  await loadScript(TESSERACT_CDN);
-  if (!window.Tesseract) throw new Error("OCR 模块加载失败");
+  const courses = [];
+  for (const column of columns) {
+    for (const group of groupColumnWords(column.words, grid.rowHeight)) {
+      const startPeriod = clampPeriod(Math.floor((group.y0 - grid.top) / grid.rowHeight) + 1, grid.periodCount);
+      const endPeriod = clampPeriod(Math.ceil((group.y1 - grid.top) / grid.rowHeight), grid.periodCount);
+      const blockText = group.words
+        .sort((a, b) => (a.y0 - b.y0) || (a.x0 - b.x0))
+        .map((word) => word.text)
+        .join("");
+      const course = parseCourseBlockText(blockText, {
+        weekday: column.day,
+        startPeriod,
+        endPeriod: Math.max(startPeriod, endPeriod),
+        index: courses.length,
+        periodTimes,
+      });
+      if (course) courses.push(course);
+    }
+  }
 
-  const result = await window.Tesseract.recognize(file, "chi_sim+eng", {
-    logger(message) {
-      if (message.status === "recognizing text") {
-        elements.ocrHint.textContent = `正在识别图片：${Math.round(message.progress * 100)}%`;
-      }
-    },
-  });
-  return result.data.text;
+  return courses;
+}
+
+function findWeekdayCenters(words, width) {
+  const dayMap = new Map([
+    ["一", 1],
+    ["二", 2],
+    ["三", 3],
+    ["四", 4],
+    ["五", 5],
+    ["六", 6],
+    ["日", 7],
+    ["天", 7],
+  ]);
+  const centers = [];
+
+  for (const word of words) {
+    const match = word.text.match(/(?:星期|周)?([一二三四五六日天])/);
+    if (!match || !dayMap.has(match[1])) continue;
+    const x = (word.x0 + word.x1) / 2;
+    if (x < width * 0.14) continue;
+    centers.push({ day: dayMap.get(match[1]), x, y: (word.y0 + word.y1) / 2 });
+  }
+
+  const unique = [];
+  for (const item of centers.sort((a, b) => a.day - b.day || a.x - b.x)) {
+    if (!unique.some((center) => center.day === item.day)) unique.push(item);
+  }
+  if (unique.length >= 2) return unique.sort((a, b) => a.x - b.x);
+
+  const left = width * 0.18;
+  const columnWidth = (width * 0.82) / 6;
+  return Array.from({ length: 6 }, (_, index) => ({
+    day: index + 1,
+    x: left + columnWidth * index + columnWidth / 2,
+    y: 0,
+  }));
+}
+
+function inferScheduleGrid(words, canvas, weekdayCenters) {
+  const headerY = Math.max(...weekdayCenters.map((center) => center.y || canvas.height * 0.16));
+  const courseListWord = words.find((word) => /课程列表/.test(word.text));
+  const periodLabels = words
+    .filter((word) => /第?[一二三四五六七八九十]{1,3}节/.test(word.text) || /^第?\d{1,2}节?$/.test(word.text))
+    .map((word) => (word.y0 + word.y1) / 2)
+    .sort((a, b) => a - b);
+  const periodCount = Math.max(getPeriodEntries().length, periodLabels.length, 12);
+  const top = periodLabels[0] ? periodLabels[0] - 4 : headerY + 36;
+  const bottom = courseListWord ? courseListWord.y0 - 20 : canvas.height * 0.9;
+  const rowHeight = Math.max(44, (bottom - top) / periodCount);
+  const columnWidth = medianGap(weekdayCenters.map((center) => center.x)) || canvas.width / 7;
+  return { top, bottom, rowHeight, columnWidth, periodCount };
+}
+
+function groupColumnWords(words, rowHeight) {
+  const groups = [];
+  const sorted = words.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
+  for (const word of sorted) {
+    const last = groups.at(-1);
+    if (!last || word.y0 - last.y1 > rowHeight * 0.72) {
+      groups.push({ y0: word.y0, y1: word.y1, words: [word] });
+    } else {
+      last.y0 = Math.min(last.y0, word.y0);
+      last.y1 = Math.max(last.y1, word.y1);
+      last.words.push(word);
+    }
+  }
+  return groups.filter((group) => group.words.map((word) => word.text).join("").length >= 8);
+}
+
+function nearestColumn(columns, x, columnWidth) {
+  let nearest = null;
+  for (const column of columns) {
+    const distance = Math.abs(column.x - x);
+    if (distance <= columnWidth * 0.58 && (!nearest || distance < nearest.distance)) {
+      nearest = { column, distance };
+    }
+  }
+  return nearest?.column || null;
+}
+
+function medianGap(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const gaps = sorted.slice(1).map((value, index) => value - sorted[index]).filter((gap) => gap > 0);
+  if (!gaps.length) return 0;
+  return gaps.sort((a, b) => a - b)[Math.floor(gaps.length / 2)];
+}
+
+function clampPeriod(period, max) {
+  return Math.min(Math.max(period, 1), max);
+}
+
+function isTableNoise(text) {
+  return /^(星期|周|第?[一二三四五六七八九十]{1,3}节|第?\d{1,2}节?|课程列表|课表|格式|说明|节次|周次)$/.test(text);
 }
 
 function loadScript(src) {
@@ -613,6 +792,16 @@ function addPeriodEditorRow() {
   const nextPeriod = String(entries.length + 1);
   settings.periodTimes[nextPeriod] = suggestNextPeriodTime(last);
   renderPeriodEditor();
+}
+
+function ensurePeriodCount(count) {
+  let entries = getPeriodEntries();
+  while (entries.length < count) {
+    const last = entries.at(-1)?.[1] || ["08:00", "08:45"];
+    settings.periodTimes[String(entries.length + 1)] = suggestNextPeriodTime(last);
+    entries = getPeriodEntries();
+  }
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
 function suggestNextPeriodTime(previousRange) {

@@ -129,6 +129,33 @@ export function parseScheduleText(text, options = {}) {
   return courses;
 }
 
+export function parseCourseBlockText(block, defaults = {}) {
+  const raw = String(block).replace(/\s+/g, "");
+  if (!raw || !/\d{3,5}|\d{1,2}\s*[-~至]\s*\d{1,2}/.test(raw)) return null;
+
+  const weekLocation = extractBlockWeekLocation(raw);
+  if (!weekLocation.weekText) return null;
+
+  const time = defaults.time || resolveLessonTime(`${defaults.startPeriod || 1}-${defaults.endPeriod || defaults.startPeriod || 1}节`, defaults.periodTimes);
+  if (!time) return null;
+
+  const name = cleanCourseName(extractBlockName(raw));
+  const teacher = extractBlockTeacher(raw, weekLocation.weekText);
+
+  return {
+    id: `course-${defaults.index || 0}`,
+    name: name || "未命名课程",
+    weekday: defaults.weekday,
+    weekdayLabel: WEEKDAY_LABELS[defaults.weekday],
+    time,
+    weeks: normalizeWeeks(weekLocation.weekText),
+    location: weekLocation.location || "地点待确认",
+    teacher,
+    source: "import",
+    confidence: 0.72,
+  };
+}
+
 function parseLine(line, pendingName, index, scheduleTimes) {
   const weekday = extractWeekday(line);
   const time = resolveLessonTime(line, scheduleTimes);
@@ -191,6 +218,36 @@ function extractLocation(line, name, weekdayRaw, timeLabel, weekText) {
 function extractTeacher(line) {
   const match = String(line).match(/(?:教师|老师|授课教师|任课教师)\s*[:：]\s*([\u4e00-\u9fa5A-Za-z·.\s]{1,12})/);
   return match?.[1]?.trim() || "";
+}
+
+function extractBlockWeekLocation(raw) {
+  const parenthesized = [...raw.matchAll(/[（(]([^（）()]+)[）)]/g)].map((match) => match[1]);
+  const weekChunk = parenthesized.find((chunk) => /\d{1,2}\s*[-~至]\s*\d{1,2}/.test(chunk));
+  if (!weekChunk) return { weekText: "", location: "" };
+
+  const [weekText, ...locationParts] = weekChunk.split(/[,，]/).map((part) => part.trim()).filter(Boolean);
+  return {
+    weekText: `${weekText}周`,
+    location: locationParts.join("，"),
+  };
+}
+
+function extractBlockName(raw) {
+  const codeIndex = raw.search(/[（(]\d{3,5}[）)]/);
+  if (codeIndex > 0) return raw.slice(0, codeIndex);
+  const weekIndex = raw.search(/[（(]\d{1,2}\s*[-~至]\s*\d{1,2}/);
+  return weekIndex > 0 ? raw.slice(0, weekIndex) : raw;
+}
+
+function extractBlockTeacher(raw, weekText) {
+  const chunks = [...raw.matchAll(/[（(]([^（）()]+)[）)]/g)].map((match) => match[1].trim());
+  const candidates = chunks.filter((chunk) => {
+    if (chunk === weekText) return false;
+    if (/^\d{3,5}$/.test(chunk)) return false;
+    if (/\d{1,2}\s*[-~至]\s*\d{1,2}/.test(chunk)) return false;
+    return /^[\u4e00-\u9fa5、，,·]{2,16}$/.test(chunk);
+  });
+  return candidates.at(-1) || "";
 }
 
 function hasScheduleSignal(line) {

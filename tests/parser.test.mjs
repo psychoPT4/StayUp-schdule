@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  parseCourseBlockText,
   parseScheduleText,
   resolveLessonTime,
   normalizeWeeks,
@@ -165,4 +166,21 @@ test("parses teacher from schedule text", () => {
 
   assert.equal(course.teacher, "张老师");
   assert.equal(course.location, "信息楼205");
+});
+
+test("parses Nankai-style course block text", () => {
+  const course = parseCourseBlockText("高等数学（A类）II(0487)(吴立波)(1-16,津南公教楼C区421)", {
+    weekday: 1,
+    startPeriod: 2,
+    endPeriod: 4,
+  });
+
+  assert.equal(course.name, "高等数学（A类）II");
+  assert.equal(course.teacher, "吴立波");
+  assert.equal(course.location, "津南公教楼C区421");
+  assert.equal(course.weekday, 1);
+  assert.equal(course.time.startPeriod, 2);
+  assert.equal(course.time.endPeriod, 4);
+  assert.equal(course.weeks.start, 1);
+  assert.equal(course.weeks.end, 16);
 });
