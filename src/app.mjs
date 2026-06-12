@@ -205,6 +205,7 @@ function addManualCourse(event) {
     time,
     weeks: normalizeWeeks(String(form.get("weeks"))),
     location: String(form.get("location")).trim(),
+    teacher: String(form.get("teacher")).trim(),
     source: "manual",
     confidence: 1,
   };
@@ -320,6 +321,7 @@ function renderCourseCard(course) {
     <div class="course-card" style="--course-border:${theme.border};--course-bg:${theme.bg};--course-fg:${theme.fg};grid-row:${course.time.startPeriod} / ${course.time.endPeriod + 1}">
       <strong>${escapeHtml(course.name)}</strong>
       <div class="course-meta">
+        ${course.teacher ? `<span>${escapeHtml(course.teacher)}</span>` : ""}
         <span>${escapeHtml(course.location)}</span>
         <span>${escapeHtml(course.weeks.label)}</span>
       </div>
@@ -360,7 +362,7 @@ function renderReviewList() {
       <strong>${escapeHtml(course.name)}</strong>
       <div class="course-meta">
         <span>${course.weekdayLabel} ${course.time.label} ${course.time.startTime}-${course.time.endTime}</span>
-        <span>${escapeHtml(course.weeks.label)} · ${escapeHtml(course.location)}</span>
+        <span>${escapeHtml(course.weeks.label)} · ${escapeHtml(course.location)}${course.teacher ? ` · ${escapeHtml(course.teacher)}` : ""}</span>
         <span>来源：${course.source === "manual" ? "手动" : "导入"} · 可信度 ${Math.round(course.confidence * 100)}%</span>
       </div>
       <div class="review-actions"><button class="danger" data-delete="${course.id}">删除</button></div>

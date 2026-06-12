@@ -138,6 +138,7 @@ function parseLine(line, pendingName, index, scheduleTimes) {
 
   const weeks = normalizeWeeks(weekText);
   const name = cleanCourseName(pendingName || extractInlineName(line, weekday.raw, time.label, weekText));
+  const teacher = extractTeacher(line);
   const location = extractLocation(line, name, weekday.raw, time.label, weekText);
 
   return {
@@ -148,6 +149,7 @@ function parseLine(line, pendingName, index, scheduleTimes) {
     time,
     weeks,
     location,
+    teacher,
     source: "import",
     confidence: location ? 0.92 : 0.78,
   };
@@ -175,6 +177,7 @@ function extractInlineName(line, weekdayRaw, timeLabel, weekText) {
 
 function extractLocation(line, name, weekdayRaw, timeLabel, weekText) {
   let location = line;
+  location = location.replace(/(?:教师|老师|授课教师|任课教师)\s*[:：]\s*[\u4e00-\u9fa5A-Za-z·.\s]{1,12}/g, " ");
   location = location.replace(/第?\s*\d{1,2}\s*[-~至,，]\s*\d{1,2}\s*节/g, " ");
   location = location.replace(/\d{1,2}:\d{2}\s*[-~至]\s*\d{1,2}:\d{2}/g, " ");
   for (const token of [name, weekdayRaw, timeLabel, `第${timeLabel}`, weekText]) {
@@ -183,6 +186,11 @@ function extractLocation(line, name, weekdayRaw, timeLabel, weekText) {
   location = location.replace(/\s+/g, " ").trim();
   location = location.replace(/^(单周|双周|奇周|偶周)\s*/, "");
   return location || "地点待确认";
+}
+
+function extractTeacher(line) {
+  const match = String(line).match(/(?:教师|老师|授课教师|任课教师)\s*[:：]\s*([\u4e00-\u9fa5A-Za-z·.\s]{1,12})/);
+  return match?.[1]?.trim() || "";
 }
 
 function hasScheduleSignal(line) {

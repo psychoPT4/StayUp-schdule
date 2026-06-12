@@ -75,6 +75,7 @@ test("parses website-style schedule text with weekday, time, location, and weeks
         label: "1-16周",
       },
       location: "教学楼A101",
+      teacher: "",
       source: "import",
       confidence: 0.92,
     },
@@ -97,6 +98,7 @@ test("parses website-style schedule text with weekday, time, location, and weeks
         label: "2-12周 双周",
       },
       location: "外语楼305",
+      teacher: "",
       source: "import",
       confidence: 0.92,
     },
@@ -156,4 +158,11 @@ test("uses custom period times when resolving lessons", () => {
     endTime: "11:40",
     label: "3-4节",
   });
+});
+
+test("parses teacher from schedule text", () => {
+  const [course] = parseScheduleText("离散数学 周二 3-4节 1-16周 信息楼205 教师：张老师");
+
+  assert.equal(course.teacher, "张老师");
+  assert.equal(course.location, "信息楼205");
 });
