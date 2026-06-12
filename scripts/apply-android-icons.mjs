@@ -5,25 +5,24 @@ import { fileURLToPath } from "node:url";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const res = join(root, "android", "app", "src", "main", "res");
 
-const valuesDir = join(res, "values");
 const drawableDir = join(res, "drawable");
 const mipmapDir = join(res, "mipmap-anydpi-v26");
 
-for (const directory of [valuesDir, drawableDir, mipmapDir]) {
+for (const directory of [drawableDir, mipmapDir]) {
   mkdirSync(directory, { recursive: true });
 }
 
 writeFileSync(
-  join(valuesDir, "ic_launcher_colors.xml"),
+  join(drawableDir, "stayup_launcher_background.xml"),
   `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-  <color name="ic_launcher_background">#F8F4EA</color>
-</resources>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+  <solid android:color="#F8F4EA"/>
+</shape>
 `,
 );
 
 writeFileSync(
-  join(drawableDir, "ic_launcher_foreground.xml"),
+  join(drawableDir, "stayup_launcher_foreground.xml"),
   `<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
   android:width="108dp"
@@ -54,8 +53,8 @@ writeFileSync(
 
 const adaptiveIcon = `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-  <background android:drawable="@color/ic_launcher_background"/>
-  <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+  <background android:drawable="@drawable/stayup_launcher_background"/>
+  <foreground android:drawable="@drawable/stayup_launcher_foreground"/>
 </adaptive-icon>
 `;
 
