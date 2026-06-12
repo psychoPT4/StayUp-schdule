@@ -51,6 +51,7 @@ const elements = {
   parseButton: document.querySelector("#parseButton"),
   fetchButton: document.querySelector("#fetchButton"),
   ocrServiceUrl: document.querySelector("#ocrServiceUrl"),
+  testOcrServiceButton: document.querySelector("#testOcrServiceButton"),
   imageInput: document.querySelector("#imageInput"),
   ocrHint: document.querySelector("#ocrHint"),
   courseForm: document.querySelector("#courseForm"),
@@ -90,6 +91,7 @@ function bindEvents() {
   elements.ocrServiceUrl.addEventListener("change", () => {
     localStorage.setItem(OCR_SERVICE_KEY, elements.ocrServiceUrl.value.trim());
   });
+  elements.testOcrServiceButton.addEventListener("click", testOcrService);
   elements.courseForm.addEventListener("submit", addManualCourse);
   elements.prevWeekButton.addEventListener("click", () => setSelectedWeek(selectedWeek - 1));
   elements.nextWeekButton.addEventListener("click", () => setSelectedWeek(selectedWeek + 1));
@@ -171,9 +173,9 @@ async function importFromImage(event) {
 }
 
 async function recognizeImageSchedule(file) {
-  const serviceUrl = elements.ocrServiceUrl.value.trim();
+  const serviceUrl = getOcrServiceUrl();
   if (serviceUrl) {
-    localStorage.setItem(OCR_SERVICE_KEY, serviceUrl);
+    localStorage.setItem(OCR_SERVICE_KEY, elements.ocrServiceUrl.value.trim());
     try {
       return await recognizeImageWithService(file, serviceUrl);
     } catch (error) {
@@ -210,6 +212,35 @@ async function recognizeImageSchedule(file) {
       courses: [],
     };
   }
+}
+
+async function testOcrService() {
+  const serviceUrl = getOcrServiceUrl();
+  if (!serviceUrl) {
+    elements.ocrHint.textContent = "先填写电脑 IP，例如 192.168.1.20。";
+    return;
+  }
+
+  const healthUrl = serviceUrl.replace(/\/api\/recognize\/?$/, "/health");
+  elements.ocrHint.textContent = "正在检测 OCR 服务...";
+  try {
+    const response = await fetch(healthUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    elements.ocrHint.textContent = "OCR 服务可用，上传图片会优先使用高精度识别。";
+  } catch (error) {
+    elements.ocrHint.textContent = `检测失败：确认电脑和手机在同一 Wi-Fi，服务已启动，并允许 8787 端口。${error.message}`;
+  }
+}
+
+function getOcrServiceUrl() {
+  const value = elements.ocrServiceUrl.value.trim();
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) {
+    return value.endsWith("/api/recognize") ? value : `${value.replace(/\/$/, "")}/api/recognize`;
+  }
+  const host = value.replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+  if (!host) return "";
+  return `http://${host.includes(":") ? host : `${host}:8787`}/api/recognize`;
 }
 
 async function recognizeImageWithService(file, serviceUrl) {

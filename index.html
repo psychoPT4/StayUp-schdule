@@ -63,11 +63,14 @@
 
         <div class="control-block">
           <label for="imageInput">图片识别导入</label>
-          <label for="ocrServiceUrl">高精度 OCR 服务地址（可选）
-            <input id="ocrServiceUrl" inputmode="url" placeholder="http://192.168.1.20:8787/api/recognize" />
+          <label for="ocrServiceUrl">电脑 IP（可选，高精度识别）
+            <div class="inline-row">
+              <input id="ocrServiceUrl" inputmode="decimal" placeholder="192.168.1.20" />
+              <button id="testOcrServiceButton" type="button" class="secondary">检测</button>
+            </div>
           </label>
           <input id="imageInput" type="file" accept="image/*" />
-          <p class="hint" id="ocrHint">填服务地址后会优先使用 OpenCV + PaddleOCR 结构化识别；未填写时使用浏览器离线 OCR 兜底。</p>
+          <p class="hint" id="ocrHint">电脑运行 OCR 服务后，只填电脑 IP；不填则使用离线识别。</p>
         </div>
       </section>
 

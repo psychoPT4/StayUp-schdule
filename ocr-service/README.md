@@ -17,16 +17,16 @@ py -m venv .venv
 .\.venv\Scripts\python -m uvicorn app:app --host 0.0.0.0 --port 8787
 ```
 
-On the phone, set the OCR service URL in the app import page to:
+On the phone, fill only the PC LAN IP in the app import page:
 
 ```text
-http://YOUR_PC_LAN_IP:8787/api/recognize
+YOUR_PC_LAN_IP
 ```
 
 For example:
 
 ```text
-http://192.168.1.20:8787/api/recognize
+192.168.1.20
 ```
 
 The phone and PC must be on the same Wi-Fi network, and Windows Firewall must allow port `8787`.
