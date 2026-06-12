@@ -138,6 +138,25 @@
       </form>
     </dialog>
 
+    <dialog id="cropDialog">
+      <form method="dialog" class="dialog-card crop-dialog-card">
+        <h2>裁剪课表图片</h2>
+        <p class="hint">尽量只保留上方课表表格部分，去掉浏览器地址栏、底部导航、课程列表和空白边缘。</p>
+        <canvas id="cropCanvas" class="crop-canvas" aria-label="课表图片裁剪预览"></canvas>
+        <div class="crop-controls">
+          <label>上边界<input id="cropTop" type="range" min="0" max="90" value="12" /></label>
+          <label>下边界<input id="cropBottom" type="range" min="10" max="100" value="72" /></label>
+          <label>左边界<input id="cropLeft" type="range" min="0" max="90" value="0" /></label>
+          <label>右边界<input id="cropRight" type="range" min="10" max="100" value="100" /></label>
+        </div>
+        <div class="dialog-actions">
+          <button id="resetCropButton" type="button" class="ghost">重置</button>
+          <button id="cancelCropButton" type="button" class="secondary">取消</button>
+          <button id="confirmCropButton" type="button">开始识别</button>
+        </div>
+      </form>
+    </dialog>
+
     <script type="module" src="./src/app.mjs"></script>
   </body>
 </html>

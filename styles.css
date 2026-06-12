@@ -413,6 +413,35 @@ dialog::backdrop {
   font-size: 20px;
 }
 
+.crop-dialog-card {
+  max-height: 88vh;
+  overflow: auto;
+}
+
+.crop-canvas {
+  width: 100%;
+  max-height: 48vh;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  object-fit: contain;
+}
+
+.crop-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.crop-controls input {
+  padding: 0;
+}
+
+.dialog-actions {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 8px;
+}
+
 .period-settings,
 .schedule-settings {
   display: grid;

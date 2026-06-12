@@ -34,6 +34,7 @@ let courses = getActiveSchedule().courses;
 let settings = loadSettings();
 let selectedWeek = getCurrentWeek();
 let viewMode = loadViewMode();
+let cropState = null;
 
 const elements = {
   currentWeek: document.querySelector("#currentWeek"),
@@ -60,6 +61,15 @@ const elements = {
   clearButton: document.querySelector("#clearButton"),
   settingsButton: document.querySelector("#settingsButton"),
   settingsDialog: document.querySelector("#settingsDialog"),
+  cropDialog: document.querySelector("#cropDialog"),
+  cropCanvas: document.querySelector("#cropCanvas"),
+  cropTop: document.querySelector("#cropTop"),
+  cropBottom: document.querySelector("#cropBottom"),
+  cropLeft: document.querySelector("#cropLeft"),
+  cropRight: document.querySelector("#cropRight"),
+  resetCropButton: document.querySelector("#resetCropButton"),
+  cancelCropButton: document.querySelector("#cancelCropButton"),
+  confirmCropButton: document.querySelector("#confirmCropButton"),
   termStart: document.querySelector("#termStart"),
   scheduleSelect: document.querySelector("#scheduleSelect"),
   newScheduleName: document.querySelector("#newScheduleName"),
@@ -92,6 +102,16 @@ function bindEvents() {
     localStorage.setItem(OCR_SERVICE_KEY, elements.ocrServiceUrl.value.trim());
   });
   elements.testOcrServiceButton.addEventListener("click", testOcrService);
+  [elements.cropTop, elements.cropBottom, elements.cropLeft, elements.cropRight].forEach((input) => {
+    input.addEventListener("input", renderCropPreview);
+  });
+  elements.resetCropButton.addEventListener("click", resetCropBounds);
+  elements.cancelCropButton.addEventListener("click", () => {
+    cropState = null;
+    elements.imageInput.value = "";
+    elements.cropDialog.close();
+  });
+  elements.confirmCropButton.addEventListener("click", confirmImageCrop);
   elements.courseForm.addEventListener("submit", addManualCourse);
   elements.prevWeekButton.addEventListener("click", () => setSelectedWeek(selectedWeek - 1));
   elements.nextWeekButton.addEventListener("click", () => setSelectedWeek(selectedWeek + 1));
@@ -160,8 +180,18 @@ async function importFromImage(event) {
   if (!file) return;
 
   try {
-    elements.ocrHint.textContent = "正在识别图片并恢复课表结构，请稍等...";
-    const { text, courses: imageCourses } = await recognizeImageSchedule(file);
+    await openImageCropper(file);
+  } catch (error) {
+    elements.ocrHint.textContent = `无法打开裁剪工具：${error.message}`;
+  }
+}
+
+async function recognizeCroppedImage(file) {
+  if (!file) return;
+
+  try {
+    elements.ocrHint.textContent = "正在识别裁剪后的课表，请稍等...";
+    const { text, courses: imageCourses } = await recognizeImageSchedule(file, { cropped: true });
     elements.rawSchedule.value = text;
     const imported = imageCourses.length ? imageCourses : parseScheduleText(text, { periodTimes: settings.periodTimes });
     ensurePeriodCount(Math.max(0, ...imported.map((course) => course.time.endPeriod)));
@@ -172,7 +202,7 @@ async function importFromImage(event) {
   }
 }
 
-async function recognizeImageSchedule(file) {
+async function recognizeImageSchedule(file, options = {}) {
   const nativeResult = await recognizeImageWithNativeOcr(file);
   if (nativeResult) return nativeResult;
 
@@ -186,7 +216,7 @@ async function recognizeImageSchedule(file) {
     }
   }
 
-  const prepared = await prepareScheduleImage(file);
+  const prepared = await prepareScheduleImage(file, { cropped: options.cropped });
 
   try {
     await loadScript(TESSERACT_CDN);
@@ -242,6 +272,94 @@ function fileToDataUrl(file) {
     reader.onload = () => resolve(String(reader.result || ""));
     reader.onerror = () => reject(new Error("无法读取图片文件"));
     reader.readAsDataURL(file);
+  });
+}
+
+async function openImageCropper(file) {
+  const bitmap = await createImageBitmap(file);
+  cropState = { file, bitmap };
+  resetCropBounds();
+  renderCropPreview();
+  elements.cropDialog.showModal();
+}
+
+function resetCropBounds() {
+  elements.cropTop.value = 12;
+  elements.cropBottom.value = 72;
+  elements.cropLeft.value = 0;
+  elements.cropRight.value = 100;
+  renderCropPreview();
+}
+
+function getCropBounds() {
+  const left = Number(elements.cropLeft.value);
+  const right = Math.max(left + 5, Number(elements.cropRight.value));
+  const top = Number(elements.cropTop.value);
+  const bottom = Math.max(top + 5, Number(elements.cropBottom.value));
+  return { left, right: Math.min(right, 100), top, bottom: Math.min(bottom, 100) };
+}
+
+function renderCropPreview() {
+  if (!cropState?.bitmap) return;
+  const canvas = elements.cropCanvas;
+  const context = canvas.getContext("2d");
+  const bitmap = cropState.bitmap;
+  const maxWidth = 360;
+  const scale = Math.min(1, maxWidth / bitmap.width);
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+  const bounds = getCropBounds();
+  const rect = {
+    x: (bounds.left / 100) * canvas.width,
+    y: (bounds.top / 100) * canvas.height,
+    width: ((bounds.right - bounds.left) / 100) * canvas.width,
+    height: ((bounds.bottom - bounds.top) / 100) * canvas.height,
+  };
+
+  context.fillStyle = "rgba(21, 32, 30, 0.42)";
+  context.fillRect(0, 0, canvas.width, rect.y);
+  context.fillRect(0, rect.y + rect.height, canvas.width, canvas.height - rect.y - rect.height);
+  context.fillRect(0, rect.y, rect.x, rect.height);
+  context.fillRect(rect.x + rect.width, rect.y, canvas.width - rect.x - rect.width, rect.height);
+  context.strokeStyle = "#d98b37";
+  context.lineWidth = 3;
+  context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+}
+
+async function confirmImageCrop() {
+  if (!cropState?.bitmap) return;
+  const cropped = await exportCroppedImage(cropState.bitmap);
+  cropState = null;
+  elements.cropDialog.close();
+  elements.imageInput.value = "";
+  await recognizeCroppedImage(cropped);
+}
+
+function exportCroppedImage(bitmap) {
+  const bounds = getCropBounds();
+  const source = {
+    x: Math.round((bounds.left / 100) * bitmap.width),
+    y: Math.round((bounds.top / 100) * bitmap.height),
+    width: Math.round(((bounds.right - bounds.left) / 100) * bitmap.width),
+    height: Math.round(((bounds.bottom - bounds.top) / 100) * bitmap.height),
+  };
+  const canvas = document.createElement("canvas");
+  canvas.width = source.width;
+  canvas.height = source.height;
+  const context = canvas.getContext("2d");
+  context.drawImage(bitmap, source.x, source.y, source.width, source.height, 0, 0, source.width, source.height);
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("裁剪图片失败"));
+        return;
+      }
+      resolve(new File([blob], "schedule-crop.png", { type: "image/png" }));
+    }, "image/png");
   });
 }
 
@@ -313,14 +431,16 @@ function normalizeServiceCourse(course) {
   };
 }
 
-async function prepareScheduleImage(file) {
+async function prepareScheduleImage(file, options = {}) {
   const bitmap = await createImageBitmap(file);
-  const crop = {
-    x: 0,
-    y: Math.round(bitmap.height * 0.14),
-    width: bitmap.width,
-    height: Math.round(bitmap.height * 0.62),
-  };
+  const crop = options.cropped
+    ? { x: 0, y: 0, width: bitmap.width, height: bitmap.height }
+    : {
+        x: 0,
+        y: Math.round(bitmap.height * 0.14),
+        width: bitmap.width,
+        height: Math.round(bitmap.height * 0.62),
+      };
   const scale = 2;
   const canvas = document.createElement("canvas");
   canvas.width = crop.width * scale;
