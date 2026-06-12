@@ -48,6 +48,9 @@ jobs:
       - name: Apply Android launcher icon
         run: node scripts/apply-android-icons.mjs
 
+      - name: Apply Android native OCR
+        run: node scripts/apply-android-native-ocr.mjs
+
       - name: Build debug APK
         run: |
           cd android

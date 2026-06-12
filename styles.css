@@ -338,6 +338,17 @@ textarea {
   background: var(--surface);
 }
 
+.advanced-block {
+  display: grid;
+  gap: 10px;
+}
+
+.advanced-block summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
 .inline-row {
   display: grid;
   grid-template-columns: 1fr auto;

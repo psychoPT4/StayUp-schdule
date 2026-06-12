@@ -173,6 +173,9 @@ async function importFromImage(event) {
 }
 
 async function recognizeImageSchedule(file) {
+  const nativeResult = await recognizeImageWithNativeOcr(file);
+  if (nativeResult) return nativeResult;
+
   const serviceUrl = getOcrServiceUrl();
   if (serviceUrl) {
     localStorage.setItem(OCR_SERVICE_KEY, elements.ocrServiceUrl.value.trim());
@@ -212,6 +215,34 @@ async function recognizeImageSchedule(file) {
       courses: [],
     };
   }
+}
+
+async function recognizeImageWithNativeOcr(file) {
+  const plugin = window.Capacitor?.Plugins?.NativeScheduleOcr;
+  if (!plugin?.recognize) return null;
+
+  try {
+    elements.ocrHint.textContent = "正在使用手机内置 OCR 识别...";
+    const image = await fileToDataUrl(file);
+    const result = await plugin.recognize({ image });
+    const words = normalizeOcrWords(result.words || []);
+    return {
+      text: result.text || "",
+      courses: parseSpatialScheduleWords(words, { width: result.width, height: result.height }, settings.periodTimes),
+    };
+  } catch (error) {
+    elements.ocrHint.textContent = `手机内置 OCR 失败，正在尝试其他识别方式：${error.message}`;
+    return null;
+  }
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("无法读取图片文件"));
+    reader.readAsDataURL(file);
+  });
 }
 
 async function testOcrService() {

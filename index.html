@@ -63,14 +63,17 @@
 
         <div class="control-block">
           <label for="imageInput">图片识别导入</label>
-          <label for="ocrServiceUrl">电脑 IP（可选，高精度识别）
-            <div class="inline-row">
-              <input id="ocrServiceUrl" inputmode="decimal" placeholder="192.168.1.20" />
-              <button id="testOcrServiceButton" type="button" class="secondary">检测</button>
-            </div>
-          </label>
           <input id="imageInput" type="file" accept="image/*" />
-          <p class="hint" id="ocrHint">电脑运行 OCR 服务后，只填电脑 IP；不填则使用离线识别。</p>
+          <p class="hint" id="ocrHint">安卓端会优先使用手机内置 OCR；识别失败时自动使用离线兜底。</p>
+          <details class="advanced-block">
+            <summary>备用 OCR 服务</summary>
+            <label for="ocrServiceUrl">电脑 IP
+              <div class="inline-row">
+                <input id="ocrServiceUrl" inputmode="decimal" placeholder="192.168.1.20" />
+                <button id="testOcrServiceButton" type="button" class="secondary">检测</button>
+              </div>
+            </label>
+          </details>
         </div>
       </section>
 
