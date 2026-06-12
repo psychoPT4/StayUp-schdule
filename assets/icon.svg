@@ -1,8 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="30" fill="#f8f4ea"/>
-  <rect x="18" y="22" width="92" height="88" rx="22" fill="#1f6f68"/>
-  <path d="M38 18v22M90 18v22" stroke="#f0b35a" stroke-width="9" stroke-linecap="round"/>
-  <rect x="31" y="47" width="66" height="48" rx="10" fill="#fffdf8"/>
-  <path d="M43 62h42M43 76h28M43 90h34" stroke="#1f6f68" stroke-width="7" stroke-linecap="round"/>
-  <circle cx="88" cy="88" r="8" fill="#f0b35a"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="StayUp schedule icon">
+  <defs>
+    <linearGradient id="bg" x1="84" y1="52" x2="428" y2="470" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffdf8"/>
+      <stop offset="1" stop-color="#f2eadc"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="122" y1="144" x2="392" y2="402" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2a867d"/>
+      <stop offset="1" stop-color="#145f59"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <path
+    fill="url(#teal)"
+    d="M146 210c0-34 28-62 62-62h142c34 0 62 28 62 62v128c0 34-28 62-62 62H208c-34 0-62-28-62-62V210Zm52 74c0 10 8 18 18 18h66c10 0 18-8 18-18v-30c0-10-8-18-18-18h-66c-10 0-18 8-18 18v30Zm114 0c0 10 8 18 18 18h66c10 0 18-8 18-18v-30c0-10-8-18-18-18h-66c-10 0-18 8-18 18v30ZM198 354c0 10 8 18 18 18h66c10 0 18-8 18-18v-30c0-10-8-18-18-18h-66c-10 0-18 8-18 18v30Zm114 0c0 10 8 18 18 18h66c10 0 18-8 18-18v-30c0-10-8-18-18-18h-66c-10 0-18 8-18 18v30Z"
+  />
+  <path
+    fill="#fffdf8"
+    d="M314 118c13-13 34-13 47 0l25 25 60-60c13-13 34-13 47 0s13 34 0 47l-84 84c-13 13-34 13-47 0l-48-48c-13-13-13-35 0-48Z"
+  />
+  <path
+    fill="#1f6f68"
+    d="M329 129c8-8 20-8 28 0l25 25 71-71c8-8 20-8 28 0s8 20 0 28l-85 85c-8 8-20 8-28 0l-39-39c-8-8-8-20 0-28Z"
+  />
+  <path
+    stroke="#d98b37"
+    stroke-width="17"
+    stroke-linecap="round"
+    d="M222 96v30m55-42v34m55-23v31"
+  />
 </svg>

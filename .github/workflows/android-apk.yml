@@ -45,6 +45,9 @@ jobs:
       - name: Sync Android assets
         run: npx cap sync android
 
+      - name: Apply Android launcher icon
+        run: node scripts/apply-android-icons.mjs
+
       - name: Build debug APK
         run: |
           cd android
