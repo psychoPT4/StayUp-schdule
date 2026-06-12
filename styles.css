@@ -43,6 +43,10 @@ button {
   padding: 0 16px;
 }
 
+button:disabled {
+  opacity: 0.45;
+}
+
 button.secondary,
 button.ghost {
   background: var(--surface);
@@ -174,12 +178,37 @@ textarea {
   display: block;
 }
 
+.schedule-controls {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.schedule-controls strong {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.compact-button {
+  min-height: 38px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
 .schedule-board {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 8px;
   overflow: visible;
   padding-bottom: 8px;
+}
+
+.schedule-board.week-view {
+  grid-template-columns: 72px minmax(720px, 1fr);
+  overflow-x: auto;
+  padding-bottom: 12px;
 }
 
 .time-rail {
@@ -226,6 +255,10 @@ textarea {
   min-width: 0;
 }
 
+.week-view .days-board {
+  grid-template-columns: repeat(7, minmax(96px, 1fr));
+}
+
 .day-column {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -235,6 +268,10 @@ textarea {
 
 .day-column:not(.is-active-day) {
   display: none;
+}
+
+.week-view .day-column:not(.is-active-day) {
+  display: block;
 }
 
 .day-header {
@@ -396,15 +433,24 @@ dialog::backdrop {
   }
 
   .schedule-board {
+    grid-template-columns: 72px minmax(0, 1fr);
+    overflow-x: visible;
+  }
+
+  .schedule-board.week-view {
     grid-template-columns: 72px minmax(760px, 1fr);
     overflow-x: auto;
   }
 
   .days-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .week-view .days-board {
     grid-template-columns: repeat(7, minmax(108px, 1fr));
   }
 
-  .day-column:not(.is-active-day) {
+  .week-view .day-column:not(.is-active-day) {
     display: block;
   }
 

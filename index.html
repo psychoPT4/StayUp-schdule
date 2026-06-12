@@ -35,6 +35,13 @@
       </nav>
 
       <section class="panel active" id="schedulePanel">
+        <div class="schedule-controls" aria-label="课表视图控制">
+          <button class="ghost compact-button" id="prevWeekButton" type="button">上一周</button>
+          <strong id="viewWeekLabel">第 1 周</strong>
+          <button class="ghost compact-button" id="nextWeekButton" type="button">下一周</button>
+          <button class="secondary compact-button" id="todayWeekButton" type="button">本周</button>
+          <button class="secondary compact-button" id="viewModeButton" type="button" aria-pressed="false">整周</button>
+        </div>
         <div class="week-grid" id="weekGrid" aria-label="周课表"></div>
       </section>
 

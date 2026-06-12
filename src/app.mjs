@@ -9,6 +9,7 @@ import {
 const STORAGE_KEY = "mobile-schedule-courses";
 const SCHEDULES_KEY = "mobile-schedule-books";
 const SETTINGS_KEY = "mobile-schedule-settings";
+const VIEW_KEY = "mobile-schedule-view";
 const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
 const COURSE_THEMES = [
   { border: "#d98b37", bg: "#fff5e7", fg: "#7a3d00" },
@@ -29,9 +30,16 @@ const sampleCourses = parseScheduleText(`
 let scheduleState = loadScheduleState();
 let courses = getActiveSchedule().courses;
 let settings = loadSettings();
+let selectedWeek = getCurrentWeek();
+let viewMode = loadViewMode();
 
 const elements = {
   currentWeek: document.querySelector("#currentWeek"),
+  viewWeekLabel: document.querySelector("#viewWeekLabel"),
+  prevWeekButton: document.querySelector("#prevWeekButton"),
+  nextWeekButton: document.querySelector("#nextWeekButton"),
+  todayWeekButton: document.querySelector("#todayWeekButton"),
+  viewModeButton: document.querySelector("#viewModeButton"),
   activeScheduleName: document.querySelector("#activeScheduleName"),
   todayLabel: document.querySelector("#todayLabel"),
   nextClass: document.querySelector("#nextClass"),
@@ -76,6 +84,10 @@ function bindEvents() {
   elements.fetchButton.addEventListener("click", importFromUrl);
   elements.imageInput.addEventListener("change", importFromImage);
   elements.courseForm.addEventListener("submit", addManualCourse);
+  elements.prevWeekButton.addEventListener("click", () => setSelectedWeek(selectedWeek - 1));
+  elements.nextWeekButton.addEventListener("click", () => setSelectedWeek(selectedWeek + 1));
+  elements.todayWeekButton.addEventListener("click", () => setSelectedWeek(getCurrentWeek()));
+  elements.viewModeButton.addEventListener("click", toggleViewMode);
   elements.scheduleSelect.addEventListener("change", switchSchedule);
   elements.addScheduleButton.addEventListener("click", addSchedule);
   elements.deleteScheduleButton.addEventListener("click", deleteActiveSchedule);
@@ -253,11 +265,15 @@ function mergeCourses(imported) {
 }
 
 function render() {
-  const currentWeek = getCurrentWeek();
+  const currentWeek = selectedWeek;
   const today = new Date().getDay() || 7;
   courses = getActiveSchedule().courses;
   elements.activeScheduleName.textContent = getActiveSchedule().name;
   elements.currentWeek.textContent = currentWeek;
+  elements.viewWeekLabel.textContent = `第 ${currentWeek} 周`;
+  elements.prevWeekButton.disabled = currentWeek <= 1;
+  elements.viewModeButton.textContent = viewMode === "week" ? "当日" : "整周";
+  elements.viewModeButton.setAttribute("aria-pressed", String(viewMode === "week"));
   elements.todayLabel.textContent = weekdayLabels[today];
   renderWeekGrid(currentWeek);
   renderToday(today, currentWeek);
@@ -266,7 +282,7 @@ function render() {
 
 function renderWeekGrid(currentWeek) {
   elements.weekGrid.innerHTML = "";
-  elements.weekGrid.className = "schedule-board";
+  elements.weekGrid.className = `schedule-board ${viewMode === "week" ? "week-view" : "day-view"}`;
   const today = new Date().getDay() || 7;
 
   const timeRail = document.createElement("aside");
@@ -313,6 +329,17 @@ function renderWeekGrid(currentWeek) {
   }
 
   elements.weekGrid.append(timeRail, daysBoard);
+}
+
+function setSelectedWeek(week) {
+  selectedWeek = Math.max(1, Number(week) || 1);
+  render();
+}
+
+function toggleViewMode() {
+  viewMode = viewMode === "week" ? "day" : "week";
+  localStorage.setItem(VIEW_KEY, viewMode);
+  render();
 }
 
 function renderCourseCard(course) {
@@ -488,6 +515,10 @@ function loadSettings() {
     termStart: parsed.termStart || fallback,
     periodTimes: normalizePeriodSettings(parsed.periodTimes),
   };
+}
+
+function loadViewMode() {
+  return localStorage.getItem(VIEW_KEY) === "week" ? "week" : "day";
 }
 
 function saveCourses() {
