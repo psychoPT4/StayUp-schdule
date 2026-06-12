@@ -11,6 +11,7 @@ const STORAGE_KEY = "mobile-schedule-courses";
 const SCHEDULES_KEY = "mobile-schedule-books";
 const SETTINGS_KEY = "mobile-schedule-settings";
 const VIEW_KEY = "mobile-schedule-view";
+const OCR_SERVICE_KEY = "mobile-schedule-ocr-service-url";
 const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
 const COURSE_THEMES = [
   { border: "#d98b37", bg: "#fff5e7", fg: "#7a3d00" },
@@ -49,6 +50,7 @@ const elements = {
   importUrl: document.querySelector("#importUrl"),
   parseButton: document.querySelector("#parseButton"),
   fetchButton: document.querySelector("#fetchButton"),
+  ocrServiceUrl: document.querySelector("#ocrServiceUrl"),
   imageInput: document.querySelector("#imageInput"),
   ocrHint: document.querySelector("#ocrHint"),
   courseForm: document.querySelector("#courseForm"),
@@ -84,6 +86,10 @@ function bindEvents() {
 
   elements.fetchButton.addEventListener("click", importFromUrl);
   elements.imageInput.addEventListener("change", importFromImage);
+  elements.ocrServiceUrl.value = localStorage.getItem(OCR_SERVICE_KEY) || "";
+  elements.ocrServiceUrl.addEventListener("change", () => {
+    localStorage.setItem(OCR_SERVICE_KEY, elements.ocrServiceUrl.value.trim());
+  });
   elements.courseForm.addEventListener("submit", addManualCourse);
   elements.prevWeekButton.addEventListener("click", () => setSelectedWeek(selectedWeek - 1));
   elements.nextWeekButton.addEventListener("click", () => setSelectedWeek(selectedWeek + 1));
@@ -165,6 +171,16 @@ async function importFromImage(event) {
 }
 
 async function recognizeImageSchedule(file) {
+  const serviceUrl = elements.ocrServiceUrl.value.trim();
+  if (serviceUrl) {
+    localStorage.setItem(OCR_SERVICE_KEY, serviceUrl);
+    try {
+      return await recognizeImageWithService(file, serviceUrl);
+    } catch (error) {
+      elements.ocrHint.textContent = `高精度 OCR 服务失败，正在改用离线识别：${error.message}`;
+    }
+  }
+
   const prepared = await prepareScheduleImage(file);
 
   try {
@@ -194,6 +210,45 @@ async function recognizeImageSchedule(file) {
       courses: [],
     };
   }
+}
+
+async function recognizeImageWithService(file, serviceUrl) {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch(serviceUrl, { method: "POST", body });
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `HTTP ${response.status}`);
+  }
+  const payload = await response.json();
+  const courses = Array.isArray(payload.courses) ? payload.courses.map(normalizeServiceCourse).filter(Boolean) : [];
+  if (!courses.length) throw new Error("服务没有识别到课程块");
+  return {
+    text: JSON.stringify(payload.diagnostics || {}, null, 2),
+    courses,
+  };
+}
+
+function normalizeServiceCourse(course) {
+  if (!course?.name || !course?.weekday || !course?.time || !course?.weeks) return null;
+  return {
+    id: course.id || crypto.randomUUID(),
+    name: String(course.name),
+    weekday: Number(course.weekday),
+    weekdayLabel: weekdayLabels[Number(course.weekday)] || course.weekdayLabel || "",
+    time: {
+      startPeriod: Number(course.time.startPeriod),
+      endPeriod: Number(course.time.endPeriod),
+      startTime: course.time.startTime || settings.periodTimes[course.time.startPeriod]?.[0] || "",
+      endTime: course.time.endTime || settings.periodTimes[course.time.endPeriod]?.[1] || "",
+      label: course.time.label || `${course.time.startPeriod}-${course.time.endPeriod}节`,
+    },
+    weeks: course.weeks,
+    location: course.location || "地点待确认",
+    teacher: course.teacher || "",
+    source: "ocr-service",
+    confidence: Number(course.confidence || 0.7),
+  };
 }
 
 async function prepareScheduleImage(file) {

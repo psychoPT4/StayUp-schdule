@@ -63,8 +63,11 @@
 
         <div class="control-block">
           <label for="imageInput">图片识别导入</label>
+          <label for="ocrServiceUrl">高精度 OCR 服务地址（可选）
+            <input id="ocrServiceUrl" inputmode="url" placeholder="http://192.168.1.20:8787/api/recognize" />
+          </label>
           <input id="imageInput" type="file" accept="image/*" />
-          <p class="hint" id="ocrHint">优先使用浏览器 OCR；不支持时会尝试加载 Tesseract.js 本地识别，首次可能较慢。</p>
+          <p class="hint" id="ocrHint">填服务地址后会优先使用 OpenCV + PaddleOCR 结构化识别；未填写时使用浏览器离线 OCR 兜底。</p>
         </div>
       </section>
 
