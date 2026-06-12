@@ -12,6 +12,7 @@ const SCHEDULES_KEY = "mobile-schedule-books";
 const SETTINGS_KEY = "mobile-schedule-settings";
 const VIEW_KEY = "mobile-schedule-view";
 const OCR_SERVICE_KEY = "mobile-schedule-ocr-service-url";
+const MAX_OCR_PERIOD = 14;
 const TESSERACT_CDN = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
 const COURSE_THEMES = [
   { border: "#d98b37", bg: "#fff5e7", fg: "#7a3d00" },
@@ -194,7 +195,7 @@ async function recognizeCroppedImage(file) {
     const { text, courses: imageCourses } = await recognizeImageSchedule(file, { cropped: true });
     elements.rawSchedule.value = text;
     const imported = imageCourses.length ? imageCourses : parseScheduleText(text, { periodTimes: settings.periodTimes });
-    ensurePeriodCount(Math.max(0, ...imported.map((course) => course.time.endPeriod)));
+    ensurePeriodCount(Math.min(MAX_OCR_PERIOD, Math.max(0, ...imported.map((course) => course.time.endPeriod))));
     mergeCourses(imported);
     activatePanel("reviewPanel");
   } catch (error) {
@@ -548,7 +549,8 @@ function inferScheduleGrid(words, canvas, weekdayCenters) {
     .filter((word) => /第?[一二三四五六七八九十]{1,3}节/.test(word.text) || /^第?\d{1,2}节?$/.test(word.text))
     .map((word) => (word.y0 + word.y1) / 2)
     .sort((a, b) => a - b);
-  const periodCount = Math.max(getPeriodEntries().length, periodLabels.length, 12);
+  const configuredCount = Math.min(getPeriodEntries().length || MAX_OCR_PERIOD, MAX_OCR_PERIOD);
+  const periodCount = Math.min(MAX_OCR_PERIOD, Math.max(configuredCount, periodLabels.length, 12));
   const top = periodLabels[0] ? periodLabels[0] - 4 : headerY + 36;
   const bottom = courseListWord ? courseListWord.y0 - 20 : canvas.height * 0.9;
   const rowHeight = Math.max(44, (bottom - top) / periodCount);
@@ -591,7 +593,7 @@ function medianGap(values) {
 }
 
 function clampPeriod(period, max) {
-  return Math.min(Math.max(period, 1), max);
+  return Math.min(Math.max(period, 1), Math.min(max, MAX_OCR_PERIOD));
 }
 
 function isTableNoise(text) {
